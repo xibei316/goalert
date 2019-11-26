@@ -21,7 +21,7 @@ func TestGraphQLCreateSchedule(t *testing.T) {
 	defer h.Close()
 
 	doQL := func(query string, res interface{}) {
-		g := h.GraphQLQuery(query)
+		g := h.GraphQLQuery2(query)
 		for _, err := range g.Errors {
 			t.Error("GraphQL Error:", err.Message)
 		}
@@ -40,48 +40,51 @@ func TestGraphQLCreateSchedule(t *testing.T) {
 
 	var sched struct {
 		CreateSchedule struct {
-			ID        string
-			Rotations []struct{ ID string }
+			ID      string
+			Name    string
+			Targets []struct {
+				ScheduleID string
+				Target     struct{ ID string }
+			}
 		}
 	}
 
 	doQL(fmt.Sprintf(`
 		mutation {
-			createSchedule(input:{
-				name: "default_testing",
-				description: "default testing",
-				time_zone: "America/Chicago",
-			}){
-				id
-				rotations {
-					id
+  			createSchedule(input: {
+      			name: "default_testing"
+				description: "default testing"
+      			timeZone: "America/Chicago"
+      			targets: {
+					newRotation: {
+						name: "foobar"
+						timeZone: "America/Chicago"
+						start: "2019-07-25T02:22:33Z"
+						type: daily
+					}
+					rules: {
+						start: "12:00"
+						end: "14:00"
+						weekdayFilter: [true, true, true, true, true]
+					}
+      			}
+    		}){
+    			id
+   				name
+				targets {
+					scheduleID
+					target {
+						id
+					}
 				}
-			}
+  			}
 		}
 	`), &sched)
 
 	sID := sched.CreateSchedule.ID
 	t.Log("Created Schedule ID :", sID)
 
-	var newSched struct {
-		Schedule struct {
-			Rotations []struct{}
-		}
-	}
-	doQL(fmt.Sprintf(`
-		query {
-			schedule(id: "%s") {
-				rotations {
-					id
-				}
-			}
-		}
-	
-	`, sID), &newSched)
-
-	t.Log("Number of rotations:", newSched)
-
-	if len(newSched.Schedule.Rotations) != 0 {
-		t.Errorf("got %d rotations; want 0", len(newSched.Schedule.Rotations))
+	if len(sched.CreateSchedule.Targets) != 1 {
+		t.Errorf("got %d schedule targets; want 1", len(sched.CreateSchedule.Targets))
 	}
 }
