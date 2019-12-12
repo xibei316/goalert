@@ -31,7 +31,7 @@ func TestGraphQLServiceLabels(t *testing.T) {
 	defer h.Close()
 
 	doQL := func(query string) {
-		g := h.GraphQLQuery(query)
+		g := h.GraphQLQuery2(query)
 		for _, err := range g.Errors {
 			t.Error("GraphQL Error:", err.Message)
 		}
@@ -44,14 +44,22 @@ func TestGraphQLServiceLabels(t *testing.T) {
 	// Edit label
 	doQL(fmt.Sprintf(`
 		mutation {
-			setLabel(input:{ target_type: service ,target_id: "%s", key: "%s", value: "%s" }) 
+			setLabel(input:{ 
+				target:{id: "%s", type: service},
+				key: "%s", 
+				value: "%s",
+			 }) 
 		}
 	`, h.UUID("sid"), "foo/bar", "editedvalue"))
 
 	// Delete label
 	doQL(fmt.Sprintf(`
 		mutation {
-			setLabel(input:{ target_type: service ,target_id: "%s", key: "%s", value: "%s" }) 
+			setLabel(input:{ 
+					target:{id: "%s", type: service},
+					key: "%s", 
+					value: "%s",
+			}) 
 		}
 	`, h.UUID("sid"), "foo/bar", ""))
 
