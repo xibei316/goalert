@@ -67,6 +67,7 @@ func (m *Mutation) CreateUserContactMethod(ctx context.Context, input graphql2.C
 		return nil, err
 	}
 
+	log.Logf(ctx, "Contact Method consent received.")
 	return cm, nil
 }
 

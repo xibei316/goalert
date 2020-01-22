@@ -6,6 +6,7 @@ import (
 
 	"github.com/target/goalert/permission"
 	"github.com/target/goalert/util"
+	"github.com/target/goalert/util/log"
 	"github.com/target/goalert/util/sqlutil"
 	"github.com/target/goalert/validation"
 	"github.com/target/goalert/validation/validate"
@@ -202,7 +203,12 @@ func (db *DB) DeleteTx(ctx context.Context, tx *sql.Tx, ids ...string) error {
 		return err
 	}
 	_, err = wrapTx(ctx, tx, db.delete).ExecContext(ctx, sqlutil.UUIDArray(ids))
-	return err
+
+	if err != nil {
+		return err
+	}
+	log.Logf(ctx, "Contact Method consent withdrawn.")
+	return nil
 }
 
 // FindOneTx implements the ContactMethodStore interface.

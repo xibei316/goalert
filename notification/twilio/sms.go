@@ -284,6 +284,9 @@ func (s *SMS) ServeMessage(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Log(ctx, err)
 		}
+
+		// todo?
+		log.Logf(ctx, "Contact Method consent withdrawn.")
 		return
 	}
 
