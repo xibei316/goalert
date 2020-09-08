@@ -58,6 +58,7 @@ type Config struct {
 		Enable bool `public:"true" info:"Enable OpenID Connect authentication."`
 
 		NewUsers     bool   `info:"Allow new user creation via OIDC authentication."`
+		IDToken      bool   `info:"Use 'id_token' response type instead of 'code'."`
 		OverrideName string `info:"Set the name/label on the login page to something other than OIDC."`
 
 		IssuerURL    string

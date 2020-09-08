@@ -179,8 +179,10 @@ func (h *Handler) IdentityProviderHandler(id string) http.HandlerFunc {
 
 		req = req.WithContext(ctx)
 
+		isInitialRequest := req.Method == "POST" && !strings.HasSuffix(req.URL.Path, "/api/v2/identity/providers/oidc/callback/post")
+
 		var refU *url.URL
-		if req.Method == "POST" {
+		if isInitialRequest {
 			var ok bool
 			refU, ok = h.refererURL(w, req)
 			if !ok {
@@ -211,7 +213,7 @@ func (h *Handler) IdentityProviderHandler(id string) http.HandlerFunc {
 			return
 		}
 
-		if req.Method == "POST" {
+		if isInitialRequest {
 			h.serveProviderPost(id, p, refU, w, req)
 			return
 		}
@@ -272,6 +274,10 @@ func (h *Handler) handleProvider(id string, p IdentityProvider, refU *url.URL, w
 
 	sub, err := p.ExtractIdentity(&route, w, req)
 	if r, ok := err.(Redirector); ok {
+		if r.RedirectURL() == "" {
+			// provider already responded
+			return
+		}
 		sp.Annotate([]trace.Attribute{trace.StringAttribute("auth.redirectURL", r.RedirectURL())}, "Redirected.")
 		http.Redirect(w, req, r.RedirectURL(), http.StatusFound)
 		return

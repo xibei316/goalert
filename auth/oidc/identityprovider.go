@@ -6,7 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"html"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -203,9 +206,43 @@ func (p *Provider) ExtractIdentity(route *auth.RouteInfo, w http.ResponseWriter,
 		oaCfg.RedirectURL = route.CurrentURL + "/callback"
 
 		u := oaCfg.AuthCodeURL(stateToken, oidc.Nonce(nonceStr))
+		if cfg.OIDC.IDToken {
+			ur, err := url.Parse(u)
+			if err != nil {
+				return nil, auth.Error("Failed to parse authorization URL.")
+			}
+			q := ur.Query()
+			q.Set("response_type", "id_token")
+			ur.RawQuery = q.Encode()
+
+			u = ur.String()
+		}
 		return nil, auth.RedirectURL(u)
 	case "/callback":
+		if cfg.OIDC.IDToken {
+			io.WriteString(w, `
+			<html>
+				<head><title>GoAlert - Reading ID Token...</title></head>
+				<body>
+					<form id="data" method="POST" action="`+html.EscapeString(route.CurrentURL)+`/post">
+						<input name="from_form" type="hidden" value="1" />
+						<input id="state" name="state" type="hidden" />
+						<input id="id_token" name="id_token" type="hidden" />
+					</form>
+					<script>
+						var params = new URLSearchParams(document.location.hash.substr(1))
+
+						document.getElementById('state').value = params.get('state')
+						document.getElementById('id_token').value = params.get('id_token')
+						document.getElementById('data').submit()
+					</script>
+				</body>
+			</html>
+		`)
+			return nil, auth.RedirectURL("")
+		}
 		// handled below
+	case "/callback/post":
 	default:
 		return nil, auth.Error(fmt.Sprintf("Could not login due to wrong configuration for %s.", name))
 	}
@@ -213,12 +250,14 @@ func (p *Provider) ExtractIdentity(route *auth.RouteInfo, w http.ResponseWriter,
 	stateToken := req.FormValue("state")
 	nonceC, err := req.Cookie(nonceCookieName)
 	if err != nil {
+		fmt.Println(err)
 		return nil, auth.Error("There was a problem recognizing this browser. You can try again")
 	}
 	auth.ClearCookie(w, req, nonceCookieName)
 
 	nonce, err := b64enc.DecodeString(nonceC.Value)
 	if err != nil || len(nonce) != 16 {
+		fmt.Println(err)
 		// We can't guarantee the current browser is the one we sent for auth (CSRF/XSS potential)
 		return nil, auth.Error("There was a problem verifying this browser. You can try again")
 	}
@@ -237,17 +276,24 @@ func (p *Provider) ExtractIdentity(route *auth.RouteInfo, w http.ResponseWriter,
 	}
 	oaCfg.RedirectURL = route.CurrentURL
 
-	oauth2Token, err := oaCfg.Exchange(ctx, req.URL.Query().Get("code"))
-	if err != nil {
-		log.Log(ctx, errors.Wrap(err, "exchange OIDC token"))
-		return nil, auth.Error(fmt.Sprintf("Could not communicate with %s server. You can try again", name))
-	}
+	var rawIDToken string
+	var oauth2Token *oauth2.Token
+	if cfg.OIDC.IDToken {
+		rawIDToken = req.FormValue("id_token")
+	} else {
+		oauth2Token, err := oaCfg.Exchange(ctx, req.FormValue("code"))
+		if err != nil {
+			log.Log(ctx, errors.Wrap(err, "exchange OIDC token"))
+			return nil, auth.Error(fmt.Sprintf("Could not communicate with %s server. You can try again", name))
+		}
 
-	// Extract the ID Token from OAuth2 token.
-	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
-	if !ok {
-		log.Log(ctx, errors.New("id_token missing"))
-		return nil, auth.Error(fmt.Sprintf("Bad response from %s server.", name))
+		var ok bool
+		// Extract the ID Token from OAuth2 token.
+		rawIDToken, ok = oauth2Token.Extra("id_token").(string)
+		if !ok {
+			log.Log(ctx, errors.New("id_token missing"))
+			return nil, auth.Error(fmt.Sprintf("Bad response from %s server.", name))
+		}
 	}
 
 	// Parse and verify ID Token payload.
@@ -264,7 +310,7 @@ func (p *Provider) ExtractIdentity(route *auth.RouteInfo, w http.ResponseWriter,
 	var remoteNonceBytes [16]byte
 	copy(remoteNonceBytes[:], remoteNonce)
 
-	ok, err = p.cfg.NonceStore.Consume(ctx, remoteNonceBytes)
+	ok, err := p.cfg.NonceStore.Consume(ctx, remoteNonceBytes)
 	if err != nil {
 		log.Log(ctx, errors.Wrap(err, "consume nonce value"))
 		return nil, auth.Error("Could not login. You can try again")
@@ -296,6 +342,9 @@ func (p *Provider) ExtractIdentity(route *auth.RouteInfo, w http.ResponseWriter,
 	var info interface{}
 	getInfo := func(name, search string) interface{} {
 		if err != nil {
+			return nil
+		}
+		if oauth2Token == nil {
 			return nil
 		}
 		if info == nil {

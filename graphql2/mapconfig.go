@@ -46,6 +46,7 @@ func MapConfigValues(cfg config.Config) []ConfigValue {
 		{ID: "GitHub.EnterpriseURL", Type: ConfigTypeString, Description: "GitHub URL (without /api) when used with GitHub Enterprise.", Value: cfg.GitHub.EnterpriseURL},
 		{ID: "OIDC.Enable", Type: ConfigTypeBoolean, Description: "Enable OpenID Connect authentication.", Value: fmt.Sprintf("%t", cfg.OIDC.Enable)},
 		{ID: "OIDC.NewUsers", Type: ConfigTypeBoolean, Description: "Allow new user creation via OIDC authentication.", Value: fmt.Sprintf("%t", cfg.OIDC.NewUsers)},
+		{ID: "OIDC.IDToken", Type: ConfigTypeBoolean, Description: "Use 'id_token' response type instead of 'code'.", Value: fmt.Sprintf("%t", cfg.OIDC.IDToken)},
 		{ID: "OIDC.OverrideName", Type: ConfigTypeString, Description: "Set the name/label on the login page to something other than OIDC.", Value: cfg.OIDC.OverrideName},
 		{ID: "OIDC.IssuerURL", Type: ConfigTypeString, Description: "", Value: cfg.OIDC.IssuerURL},
 		{ID: "OIDC.ClientID", Type: ConfigTypeString, Description: "", Value: cfg.OIDC.ClientID},
@@ -220,6 +221,12 @@ func ApplyConfigValues(cfg config.Config, vals []ConfigValueInput) (config.Confi
 				return cfg, err
 			}
 			cfg.OIDC.NewUsers = val
+		case "OIDC.IDToken":
+			val, err := parseBool(v.ID, v.Value)
+			if err != nil {
+				return cfg, err
+			}
+			cfg.OIDC.IDToken = val
 		case "OIDC.OverrideName":
 			cfg.OIDC.OverrideName = v.Value
 		case "OIDC.IssuerURL":
