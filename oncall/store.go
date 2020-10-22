@@ -227,10 +227,12 @@ func (db *DB) HistoryBySchedule(ctx context.Context, scheduleID string, start, e
 	var rules []ResolvedRule
 	for _, r := range rawRules {
 		if r.Target.TargetType() == assignment.TargetTypeRotation {
-			rules = append(rules, ResolvedRule{
-				Rule:     r,
-				Rotation: rots[r.Target.TargetID()],
-			})
+			if _, ok := rots[r.Target.TargetID()]; ok {
+				rules = append(rules, ResolvedRule{
+					Rule:     r,
+					Rotation: rots[r.Target.TargetID()],
+				})
+			}
 		} else {
 			rules = append(rules, ResolvedRule{Rule: r})
 		}
