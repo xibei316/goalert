@@ -93,8 +93,13 @@ func sortShifts(s []Shift) {
 }
 
 func (s *state) CalculateShifts(start, end time.Time) []Shift {
-	t := NewTimeIterator(start, end, time.Minute)
+	iterStart := start
+	if s.now.Before(iterStart) {
+		iterStart = s.now
+	}
+	t := NewTimeIterator(iterStart, end, time.Minute)
 	defer t.Close()
+	t.SetSpanStart(start)
 
 	hist := t.NewUserCalculator()
 	for _, s := range s.history {
@@ -139,7 +144,9 @@ func (s *state) CalculateShifts(start, end time.Time) []Shift {
 
 			// no longer on call
 			s.End = now
-			shifts = append(shifts, *s)
+			if s.End.After(start) {
+				shifts = append(shifts, *s)
+			}
 			delete(isOnCall, id)
 		}
 	}

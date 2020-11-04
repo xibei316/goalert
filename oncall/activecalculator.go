@@ -21,6 +21,8 @@ type ActiveCalculator struct {
 	init    bool
 	active  activeCalcValue
 	changed bool
+
+	spanStart time.Time
 }
 type activeCalcValue struct {
 	ID         int64
@@ -33,6 +35,7 @@ func (t *TimeIterator) NewActiveCalculator() *ActiveCalculator {
 	act := &ActiveCalculator{
 		TimeIterator: t,
 		states:       activeCalcValuePool.Get().([]activeCalcValue),
+		spanStart:    t.SpanStart(),
 	}
 	t.Register(act)
 
@@ -63,7 +66,7 @@ func (act *ActiveCalculator) SetSpan(start, end time.Time) {
 	// Skip if the span ends before the iterator start time.
 	//
 	// A zero end time indicates infinity (e.g. current shift from history).
-	if !end.After(act.Start()) && !end.IsZero() {
+	if !end.After(act.spanStart) && !end.IsZero() {
 		return
 	}
 

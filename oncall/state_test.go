@@ -13,6 +13,7 @@ import (
 
 func BenchmarkState_CalculateShifts(b *testing.B) {
 	s := &state{
+		now: time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC),
 		loc: time.UTC,
 		rules: []ResolvedRule{
 			{Rule: rule.Rule{
@@ -175,6 +176,9 @@ func TestResolvedRotation_UserID(t *testing.T) {
 
 func TestState_CalculateShifts(t *testing.T) {
 	check := func(name string, start, end time.Time, s *state, exp []Shift) {
+		if s.now.IsZero() {
+			s.now = start.Add(-time.Minute)
+		}
 		t.Helper()
 		t.Run(name, func(t *testing.T) {
 			t.Helper()
@@ -472,6 +476,37 @@ func TestState_CalculateShifts(t *testing.T) {
 			{
 				Start:     time.Date(2018, 1, 1, 7, 0, 0, 0, time.UTC),
 				End:       time.Date(2018, 1, 1, 9, 0, 0, 0, time.UTC),
+				Truncated: true,
+				UserID:    "foobar",
+			},
+		},
+	)
+
+	check("SeparatedHistory",
+		time.Date(2018, 2, 1, 8, 0, 0, 0, time.UTC), // 8:00AM
+		time.Date(2018, 3, 1, 9, 0, 0, 0, time.UTC), // 9:00AM
+		&state{
+			now: time.Date(2018, 1, 1, 8, 0, 0, 0, time.UTC),
+			loc: time.UTC,
+			history: []Shift{
+				{
+					UserID: "foobar",
+					Start:  time.Date(2018, 1, 1, 7, 0, 0, 0, time.UTC), // user actually started at 7
+				},
+			},
+			rules: []ResolvedRule{
+				{Rule: rule.Rule{
+					WeekdayFilter: rule.WeekdayFilter{1, 1, 1, 1, 1, 1, 1},
+					Start:         rule.NewClock(8, 0),
+					End:           rule.NewClock(8, 0),
+					Target:        assignment.UserTarget("foobar"),
+				}},
+			},
+		},
+		[]Shift{
+			{
+				Start:     time.Date(2018, 1, 1, 7, 0, 0, 0, time.UTC),
+				End:       time.Date(2018, 3, 1, 9, 0, 0, 0, time.UTC),
 				Truncated: true,
 				UserID:    "foobar",
 			},

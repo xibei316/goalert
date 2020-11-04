@@ -6,6 +6,9 @@ import "time"
 type TimeIterator struct {
 	t, start, end, step int64
 
+	stepDur   time.Duration
+	spanStart int64
+
 	nextStep int64
 
 	sub []SubIterator
@@ -41,12 +44,20 @@ func NewTimeIterator(start, end time.Time, step time.Duration) *TimeIterator {
 	end = end.Truncate(step)
 
 	return &TimeIterator{
-		step:     stepUnix,
-		start:    start.Unix(),
-		end:      end.Unix(),
-		nextStep: start.Unix(),
+		spanStart: start.Unix(),
+		stepDur:   step,
+		step:      stepUnix,
+		start:     start.Unix(),
+		end:       end.Unix(),
+		nextStep:  start.Unix(),
 	}
 }
+
+// SpanStart returns the cutoff time (after start) that spans should be ignored.
+func (iter *TimeIterator) SpanStart() time.Time { return time.Unix(iter.spanStart, 0) }
+
+// SetSpanStart sets the start time for spans.
+func (iter *TimeIterator) SetSpanStart(t time.Time) { iter.spanStart = t.Truncate(iter.stepDur).Unix() }
 
 // Register adds a new sub Iterator.
 func (iter *TimeIterator) Register(sub SubIterator) { iter.sub = append(iter.sub, sub) }
