@@ -49,6 +49,9 @@ func (s *Schedule) Shifts(ctx context.Context, raw *schedule.Schedule, start, en
 	if end.After(start.AddDate(0, 0, 50)) {
 		return nil, validation.NewFieldError("EndTime", "cannot be more than 50 days past StartTime")
 	}
+	if end.After(time.Now().AddDate(1, 0, 0)) {
+		return nil, validation.NewFieldError("EndTime", "cannot be more than 1 year in the future")
+	}
 	return s.OnCallStore.HistoryBySchedule(ctx, raw.ID, start, end)
 }
 
