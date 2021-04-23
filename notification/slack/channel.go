@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -271,6 +273,13 @@ func (s *ChannelSender) Send(ctx context.Context, msg notification.Message) (*no
 	// https://api.slack.com/methods/chat.postMessage
 	vals.Set("channel", msg.Destination().Value)
 	switch t := msg.(type) {
+	case *notification.OnCall:
+		var names []string
+		for _, u := range t.Users {
+			names = append(names, u.Name)
+		}
+		sort.Strings(names)
+		vals.Set("text", fmt.Sprintf("On-Call Users for %s\n%s", t.ScheduleName, strings.Join(names, ", ")))
 	case notification.Alert:
 		vals.Set("text", fmt.Sprintf("Alert: %s\n\n<%s>", t.Summary, cfg.CallbackURL("/alerts/"+strconv.Itoa(t.AlertID))))
 	case notification.AlertBundle:

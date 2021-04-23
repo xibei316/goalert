@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	alertlog "github.com/target/goalert/alert/log"
@@ -38,6 +39,15 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 
 	var notifMsg notification.Message
 	switch msg.Type {
+	case notification.MessageTypeOnCall:
+
+		m, err := p.b.OnCallMessage(ctx, msg.ScheduleID)
+		if err != nil {
+			return nil, fmt.Errorf("lookup schedule on-call info: %w", err)
+		}
+		m.Dest = msg.Dest
+		m.CallbackID = msg.ID
+		notifMsg = m
 	case notification.MessageTypeAlertBundle:
 		name, count, err := p.am.ServiceInfo(ctx, msg.ServiceID)
 		if err != nil {
@@ -110,7 +120,7 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			Code:       code,
 		}
 	default:
-		log.Log(ctx, errors.New("SEND NOT IMPLEMENTED FOR MESSAGE TYPE"))
+		log.Log(ctx, fmt.Errorf("SEND NOT IMPLEMENTED FOR MESSAGE TYPE '%s'", msg.Type.String()))
 		return &notification.MessageStatus{State: notification.MessageStateFailedPerm}, nil
 	}
 

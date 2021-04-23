@@ -751,6 +751,7 @@ export interface TargetInput {
 }
 
 export type TargetType =
+  | 'unspecified'
   | 'escalationPolicy'
   | 'notificationChannel'
   | 'slackChannel'

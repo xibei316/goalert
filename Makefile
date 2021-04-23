@@ -5,7 +5,7 @@
 .PHONY: docker-goalert docker-all-in-one release
 .SUFFIXES:
 
-GOFILES := $(shell find . -path ./web/src -prune -o -path ./vendor -prune -o -path ./.git -prune -o -type f -name "*.go" -print) go.sum
+GOFILES := $(shell find . -path ./web/src -prune -o -path ./vendor -prune -o -path ./.git -prune -o -type f -name "*.go" -print) go.sum $(shell find migrate -name '*.sql')
 CFGPARAMS = devtools/configparams/*.go
 DB_URL = postgres://goalert@localhost:5432/goalert?sslmode=disable
 

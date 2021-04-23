@@ -20,5 +20,7 @@ type Message struct {
 	CreatedAt time.Time
 	SentAt    time.Time
 
+	ScheduleID string
+
 	StatusAlertIDs []int
 }
