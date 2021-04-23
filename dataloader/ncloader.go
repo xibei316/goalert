@@ -14,8 +14,8 @@ type NCLoader struct {
 	store notificationchannel.Store
 }
 
-// NewCMLoader will create a new CMLoader using the provided store for fetch operations.
-func NewNCLoader(ctx context.Context, store notificationchannel.Store) *CMLoader {
+// NewNCLoader will create a new NCLoader using the provided store for fetch operations.
+func NewNCLoader(ctx context.Context, store notificationchannel.Store) *NCLoader {
 	p := &NCLoader{
 		store: store,
 	}
