@@ -4061,6 +4061,9 @@ input TargetInput {
 }
 
 enum TargetType {
+  # unspecified is used for invalid/missing targets, and can be dropped if found
+  unspecified
+
   escalationPolicy
   notificationChannel
   slackChannel

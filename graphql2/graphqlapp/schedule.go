@@ -37,12 +37,16 @@ func (a *OnCallNotification) Target(ctx context.Context, n *schedule.OnCallNotif
 	if err != nil {
 		return nil, err
 	}
+	if nc == nil {
+		return &assignment.RawTarget{}, nil
+	}
 
 	tgt := &assignment.RawTarget{Type: assignment.TargetTypeNotificationChannel, Name: nc.Name, ID: n.ChannelID}
 
 	switch nc.Type {
 	case notificationchannel.TypeSlack:
 		tgt.Type = assignment.TargetTypeSlackChannel
+		tgt.ID = nc.Value
 	}
 
 	return tgt, nil

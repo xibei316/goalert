@@ -23,6 +23,8 @@ import Spinner from '../loading/components/Spinner'
 import { ObjectNotFound, GenericError } from '../error-pages'
 import TempSchedDialog from './temp-sched/TempSchedDialog'
 import TempSchedDeleteConfirmation from './temp-sched/TempSchedDeleteConfirmation'
+import RequireConfig from '../util/RequireConfig'
+import OnCallNotificationsButton from './oncall-notifications/OnCallNotificationsButton'
 
 const query = gql`
   fragment ScheduleTitleQuery on Schedule {
@@ -142,6 +144,11 @@ export default function ScheduleDetails({ scheduleID }) {
             <Grid item xs={12}>
               <CalendarSubscribeButton scheduleID={scheduleID} />
             </Grid>
+            <RequireConfig configID='Slack.Enable'>
+              <Grid item xs={12}>
+                <OnCallNotificationsButton scheduleID={scheduleID} />
+              </Grid>
+            </RequireConfig>
           </Grid>
         }
         links={[

@@ -110,5 +110,7 @@ func (tt TargetType) MarshalGQL(w io.Writer) {
 		graphql.MarshalString("heartbeatMonitor").MarshalGQL(w)
 	case TargetTypeUserSession:
 		graphql.MarshalString("userSession").MarshalGQL(w)
+	default:
+		graphql.MarshalString("unspecified").MarshalGQL(w)
 	}
 }
