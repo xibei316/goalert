@@ -23,9 +23,21 @@ import (
 
 type Schedule App
 type TemporarySchedule App
+type OnCallNotification App
 
 func (a *App) Schedule() graphql2.ScheduleResolver                   { return (*Schedule)(a) }
 func (a *App) TemporarySchedule() graphql2.TemporaryScheduleResolver { return (*TemporarySchedule)(a) }
+func (a *App) OnCallNotification() graphql2.OnCallNotificationResolver {
+	return (*OnCallNotification)(a)
+}
+
+func (a *OnCallNotification) Target(ctx context.Context, n *schedule.OnCallNotification) (*assignment.RawTarget, error) {
+	return &assignment.RawTarget{Type: assignment.TargetTypeNotificationChannel, ID: n.ChannelID}, nil
+}
+
+func (a *OnCallNotification) Weekday(ctx context.Context, n *schedule.OnCallNotification) (int, error) {
+	return int(n.Weekday), nil
+}
 
 func (a *TemporarySchedule) Shifts(ctx context.Context, temp *schedule.TemporarySchedule) ([]oncall.Shift, error) {
 	result := make([]oncall.Shift, 0, len(temp.Shifts))
@@ -42,6 +54,11 @@ func (a *TemporarySchedule) Shifts(ctx context.Context, temp *schedule.Temporary
 func (q *Query) Schedule(ctx context.Context, id string) (*schedule.Schedule, error) {
 	return (*App)(q).FindOneSchedule(ctx, id)
 }
+
+func (s *Schedule) OnCallNotifications(ctx context.Context, raw *schedule.Schedule) ([]schedule.OnCallNotification, error) {
+	return s.ScheduleStore.OnCallNotifications(ctx, nil, raw.ID)
+}
+
 func (s *Schedule) Shifts(ctx context.Context, raw *schedule.Schedule, start, end time.Time) ([]oncall.Shift, error) {
 	if end.Before(start) {
 		return nil, validation.NewFieldError("EndTime", "must be after StartTime")

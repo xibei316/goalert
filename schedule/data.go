@@ -1,10 +1,25 @@
 package schedule
 
-import "time"
+import (
+	"time"
+
+	"github.com/target/goalert/util/timeutil"
+)
 
 // Data contains configuration for a single schedule.
 type Data struct {
-	V1 struct{ TemporarySchedules []TemporarySchedule }
+	V1 struct {
+		TemporarySchedules []TemporarySchedule
+
+		OnCallNotifications []OnCallNotification
+	}
+}
+
+// An OnCallNotification is used to send a notification of currently active on-call users.
+type OnCallNotification struct {
+	ChannelID string
+	Weekday   time.Weekday
+	Time      timeutil.Clock
 }
 
 // TempOnCall will calculate any on-call users for the given time. isActive will

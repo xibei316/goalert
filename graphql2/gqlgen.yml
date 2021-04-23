@@ -85,3 +85,5 @@ models:
     model: github.com/target/goalert/schedule.FixedShift
   TemporarySchedule:
     model: github.com/target/goalert/schedule.TemporarySchedule
+  OnCallNotification:
+    model: github.com/target/goalert/schedule.OnCallNotification
