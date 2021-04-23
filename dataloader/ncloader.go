@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/target/goalert/notificationchannel"
-	"github.com/target/goalert/user/contactmethod"
 )
 
 // NCLoader will load notification channels from postgres.
@@ -22,7 +21,7 @@ func NewNCLoader(ctx context.Context, store notificationchannel.Store) *NCLoader
 	p.loader = newLoader(ctx, loaderConfig{
 		Max:       100,
 		Delay:     time.Millisecond,
-		IDFunc:    func(v interface{}) string { return v.(*contactmethod.ContactMethod).ID },
+		IDFunc:    func(v interface{}) string { return v.(*notificationchannel.Channel).ID },
 		FetchFunc: p.fetch,
 	})
 	return p

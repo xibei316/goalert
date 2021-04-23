@@ -447,6 +447,13 @@ export interface Schedule {
   target?: ScheduleTarget
   isFavorite: boolean
   temporarySchedules: TemporarySchedule[]
+  onCallNotifications: OnCallNotification[]
+}
+
+export interface OnCallNotification {
+  target: Target
+  weekday: number
+  time: ClockTime
 }
 
 export interface OnCallShift {

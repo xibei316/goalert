@@ -11,6 +11,7 @@ import (
 
 	"github.com/target/goalert/assignment"
 	"github.com/target/goalert/graphql2"
+	"github.com/target/goalert/notificationchannel"
 	"github.com/target/goalert/oncall"
 	"github.com/target/goalert/permission"
 	"github.com/target/goalert/schedule"
@@ -32,7 +33,19 @@ func (a *App) OnCallNotification() graphql2.OnCallNotificationResolver {
 }
 
 func (a *OnCallNotification) Target(ctx context.Context, n *schedule.OnCallNotification) (*assignment.RawTarget, error) {
-	return &assignment.RawTarget{Type: assignment.TargetTypeNotificationChannel, ID: n.ChannelID}, nil
+	nc, err := (*App)(a).FindOneNC(ctx, n.ChannelID)
+	if err != nil {
+		return nil, err
+	}
+
+	tgt := &assignment.RawTarget{Type: assignment.TargetTypeNotificationChannel, Name: nc.Name, ID: n.ChannelID}
+
+	switch nc.Type {
+	case notificationchannel.TypeSlack:
+		tgt.Type = assignment.TargetTypeSlackChannel
+	}
+
+	return tgt, nil
 }
 
 func (a *OnCallNotification) Weekday(ctx context.Context, n *schedule.OnCallNotification) (int, error) {
