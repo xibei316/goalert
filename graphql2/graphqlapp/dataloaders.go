@@ -100,7 +100,7 @@ func (app *App) FindOneUser(ctx context.Context, id string) (*user.User, error) 
 
 // FindOneCM will return a single contact method for the given id, using the contexts dataloader if enabled.
 func (app *App) FindOneCM(ctx context.Context, id string) (*contactmethod.ContactMethod, error) {
-	loader, ok := ctx.Value(dataLoaderKeyUser).(*dataloader.CMLoader)
+	loader, ok := ctx.Value(dataLoaderKeyCM).(*dataloader.CMLoader)
 	if !ok {
 		return app.CMStore.FindOne(ctx, id)
 	}
