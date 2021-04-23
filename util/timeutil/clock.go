@@ -2,6 +2,7 @@ package timeutil
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
@@ -172,6 +173,23 @@ func (c Clock) Format(layout string) string {
 // Value implements the driver.Valuer interface.
 func (c Clock) Value() (driver.Value, error) {
 	return c.String(), nil
+}
+
+func (c Clock) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.String())
+}
+func (c *Clock) UnmarshalJSON(data []byte) error {
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+	p, err := ParseClock(s)
+	if err != nil {
+		return err
+	}
+	*c = p
+	return nil
 }
 
 // Scan implements the sql.Scanner interface.
