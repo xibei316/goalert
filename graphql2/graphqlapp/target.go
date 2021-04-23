@@ -2,6 +2,7 @@ package graphqlapp
 
 import (
 	context "context"
+
 	"github.com/target/goalert/assignment"
 	"github.com/target/goalert/graphql2"
 
@@ -17,6 +18,12 @@ func (t *Target) Name(ctx context.Context, raw *assignment.RawTarget) (*string, 
 		return &raw.Name, nil
 	}
 	switch raw.Type {
+	case assignment.TargetTypeNotificationChannel:
+		nc, err := (*App)(t).FindOneNC(ctx, raw.ID)
+		if err != nil {
+			return nil, err
+		}
+		return &nc.Name, nil
 	case assignment.TargetTypeRotation:
 		r, err := (*App)(t).FindOneRotation(ctx, raw.ID)
 		if err != nil {

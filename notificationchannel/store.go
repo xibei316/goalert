@@ -3,6 +3,7 @@ package notificationchannel
 import (
 	"context"
 	"database/sql"
+
 	"github.com/target/goalert/permission"
 	"github.com/target/goalert/util"
 	"github.com/target/goalert/util/sqlutil"
@@ -12,6 +13,7 @@ import (
 type Store interface {
 	FindAll(context.Context) ([]Channel, error)
 	FindOne(context.Context, string) (*Channel, error)
+	FindMany(context.Context, []string) ([]Channel, error)
 	CreateTx(context.Context, *sql.Tx, *Channel) (*Channel, error)
 	DeleteManyTx(context.Context, *sql.Tx, []string) error
 }
@@ -21,6 +23,7 @@ type DB struct {
 
 	findAll    *sql.Stmt
 	findOne    *sql.Stmt
+	findMany   *sql.Stmt
 	create     *sql.Stmt
 	deleteMany *sql.Stmt
 }
@@ -36,6 +39,9 @@ func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 		`),
 		findOne: p.P(`
 			select id, name, type, value from notification_channels where id = $1
+		`),
+		findMany: p.P(`
+			select id, name, type, value from notification_channels where id = any($1)
 		`),
 		create: p.P(`
 			insert into notification_channels (id, name, type, value)
@@ -101,6 +107,37 @@ func (db *DB) FindOne(ctx context.Context, id string) (*Channel, error) {
 		return nil, err
 	}
 	return &c, nil
+}
+
+// FindMany will fetch all channels matching the given ids.
+func (db *DB) FindMany(ctx context.Context, ids []string) ([]Channel, error) {
+	err := validate.ManyUUID("ChannelID", ids, 50)
+	if err != nil {
+		return nil, err
+	}
+
+	err = permission.LimitCheckAny(ctx, permission.User)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.findMany.QueryContext(ctx, sqlutil.UUIDArray(ids))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var channels []Channel
+	for rows.Next() {
+		var c Channel
+		err = rows.Scan(&c.ID, &c.Name, &c.Type, &c.Value)
+		if err != nil {
+			return nil, err
+		}
+		channels = append(channels, c)
+	}
+
+	return channels, nil
 }
 
 func (db *DB) FindAll(ctx context.Context) ([]Channel, error) {
