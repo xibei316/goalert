@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/pkg/errors"
+	"github.com/target/goalert/notificationchannel"
 	"github.com/target/goalert/permission"
 	"github.com/target/goalert/user"
 	"github.com/target/goalert/util"
@@ -31,14 +32,16 @@ type Store struct {
 	findMany *sql.Stmt
 
 	usr user.Store
+	nc  notificationchannel.Store
 }
 
-func NewStore(ctx context.Context, db *sql.DB, usr user.Store) (*Store, error) {
+func NewStore(ctx context.Context, db *sql.DB, usr user.Store, nc notificationchannel.Store) (*Store, error) {
 	p := &util.Prepare{DB: db, Ctx: ctx}
 
 	return &Store{
 		db:  db,
 		usr: usr,
+		nc:  nc,
 
 		findData:    p.P(`SELECT data FROM schedule_data WHERE schedule_id = $1`),
 		findUpdData: p.P(`SELECT data FROM schedule_data WHERE schedule_id = $1 FOR UPDATE`),

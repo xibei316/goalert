@@ -18,7 +18,6 @@ import (
 	"github.com/target/goalert/limit"
 	"github.com/target/goalert/notice"
 	"github.com/target/goalert/notification"
-	"github.com/target/goalert/notification/slack"
 	"github.com/target/goalert/notificationchannel"
 	"github.com/target/goalert/oncall"
 	"github.com/target/goalert/override"
@@ -142,13 +141,6 @@ func (app *App) initStores(ctx context.Context) error {
 		return errors.Wrap(err, "init user store")
 	}
 
-	if app.ScheduleStore == nil {
-		app.ScheduleStore, err = schedule.NewStore(ctx, app.db, app.UserStore)
-	}
-	if err != nil {
-		return errors.Wrap(err, "init schedule store")
-	}
-
 	if app.RotationStore == nil {
 		app.RotationStore, err = rotation.NewDB(ctx, app.db)
 	}
@@ -162,14 +154,25 @@ func (app *App) initStores(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "init notification channel store")
 	}
+	app.NCStore.SetNameLookupFunc(notificationchannel.TypeSlack, func(ctx context.Context, id string) (string, error) {
+		ch, err := app.slackChan.Channel(ctx, id)
+		if err != nil {
+			return "", err
+		}
+		return ch.Name, nil
+	})
+
+	if app.ScheduleStore == nil {
+		app.ScheduleStore, err = schedule.NewStore(ctx, app.db, app.UserStore, app.NCStore)
+	}
+	if err != nil {
+		return errors.Wrap(err, "init schedule store")
+	}
 
 	if app.EscalationStore == nil {
 		app.EscalationStore, err = escalation.NewDB(ctx, app.db, escalation.Config{
 			LogStore: app.AlertLogStore,
 			NCStore:  app.NCStore,
-			SlackLookupFunc: func(ctx context.Context, channelID string) (*slack.Channel, error) {
-				return app.slackChan.Channel(ctx, channelID)
-			},
 		})
 	}
 	if err != nil {

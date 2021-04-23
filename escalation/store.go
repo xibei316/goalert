@@ -8,7 +8,6 @@ import (
 
 	alertlog "github.com/target/goalert/alert/log"
 	"github.com/target/goalert/assignment"
-	"github.com/target/goalert/notification/slack"
 	"github.com/target/goalert/notificationchannel"
 	"github.com/target/goalert/permission"
 	"github.com/target/goalert/util"
@@ -93,9 +92,8 @@ var _ Manager = &DB{}
 var _ Store = &DB{}
 
 type Config struct {
-	NCStore         notificationchannel.Store
-	LogStore        alertlog.Store
-	SlackLookupFunc func(ctx context.Context, channelID string) (*slack.Channel, error)
+	NCStore  notificationchannel.Store
+	LogStore alertlog.Store
 }
 
 type DB struct {
@@ -103,7 +101,6 @@ type DB struct {
 
 	log     alertlog.Store
 	ncStore notificationchannel.Store
-	slackFn func(ctx context.Context, channelID string) (*slack.Channel, error)
 
 	findSlackChan *sql.Stmt
 
@@ -139,7 +136,6 @@ func NewDB(ctx context.Context, db *sql.DB, cfg Config) (*DB, error) {
 	return &DB{
 		db:      db,
 		log:     cfg.LogStore,
-		slackFn: cfg.SlackLookupFunc,
 		ncStore: cfg.NCStore,
 
 		findSlackChan: p.P(`
@@ -380,21 +376,12 @@ func (db *DB) _updateStepTarget(ctx context.Context, stepID string, tgt assignme
 }
 
 func (db *DB) newSlackChannel(ctx context.Context, tx *sql.Tx, slackChanID string) (assignment.Target, error) {
-	ch, err := db.slackFn(ctx, slackChanID)
+	chanID, err := db.ncStore.EnsureTx(ctx, tx, notificationchannel.TypeSlack, slackChanID)
 	if err != nil {
 		return nil, err
 	}
 
-	notifCh, err := db.ncStore.CreateTx(ctx, tx, &notificationchannel.Channel{
-		Type:  notificationchannel.TypeSlack,
-		Name:  ch.Name,
-		Value: ch.ID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return assignment.NotificationChannelTarget(notifCh.ID), nil
+	return assignment.NotificationChannelTarget(chanID), nil
 }
 func (db *DB) lookupSlackChannel(ctx context.Context, tx *sql.Tx, stepID, slackChanID string) (assignment.Target, error) {
 	var notifChanID string

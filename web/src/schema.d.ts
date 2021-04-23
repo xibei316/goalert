@@ -208,6 +208,7 @@ export interface SetScheduleShiftInput {
 }
 
 export interface Mutation {
+  setScheduleOnCallNotifications: boolean
   setTemporarySchedule: boolean
   clearTemporarySchedules: boolean
   debugCarrierInfo: DebugCarrierInfo
@@ -249,6 +250,17 @@ export interface Mutation {
   updateAlertsByService: boolean
   setConfig: boolean
   setSystemLimits: boolean
+}
+
+export interface SetScheduleOnCallNotificationsInput {
+  scheduleID: string
+  onCallNotifications: OnCallNotificationInput[]
+}
+
+export interface OnCallNotificationInput {
+  weekday: number
+  time: ClockTime
+  target: TargetInput
 }
 
 export interface UpdateAlertsByServiceInput {

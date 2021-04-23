@@ -3,6 +3,7 @@ package schedule
 import (
 	"time"
 
+	"github.com/target/goalert/notificationchannel"
 	"github.com/target/goalert/util/timeutil"
 )
 
@@ -17,6 +18,9 @@ type Data struct {
 
 // An OnCallNotification is used to send a notification of currently active on-call users.
 type OnCallNotification struct {
+	// Channel is only used by the Set method and is not returned by any read methods.
+	Channel *notificationchannel.Channel `json:"-"`
+
 	ChannelID string
 	Weekday   time.Weekday
 	Time      timeutil.Clock

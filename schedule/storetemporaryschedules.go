@@ -76,7 +76,8 @@ func isDataPkeyConflict(err error) bool {
 	}
 	return dbErr.ConstraintName == "schedule_data_pkey"
 }
-func (store *Store) updateFixedShifts(ctx context.Context, tx *sql.Tx, scheduleID string, apply func(data *Data) error) error {
+
+func (store *Store) updateScheduleData(ctx context.Context, tx *sql.Tx, scheduleID string, apply func(data *Data) error) error {
 	var err error
 	externalTx := tx != nil
 	if !externalTx {
@@ -155,7 +156,7 @@ func (store *Store) SetTemporarySchedule(ctx context.Context, tx *sql.Tx, schedu
 		return err
 	}
 
-	return store.updateFixedShifts(ctx, tx, scheduleID, func(data *Data) error {
+	return store.updateScheduleData(ctx, tx, scheduleID, func(data *Data) error {
 		data.V1.TemporarySchedules = setFixedShifts(data.V1.TemporarySchedules, start, end, shifts)
 		return nil
 	})
@@ -177,7 +178,7 @@ func (store *Store) ClearTemporarySchedules(ctx context.Context, tx *sql.Tx, sch
 		return err
 	}
 
-	return store.updateFixedShifts(ctx, tx, scheduleID, func(data *Data) error {
+	return store.updateScheduleData(ctx, tx, scheduleID, func(data *Data) error {
 		data.V1.TemporarySchedules = deleteFixedShifts(data.V1.TemporarySchedules, start, end)
 		return nil
 	})

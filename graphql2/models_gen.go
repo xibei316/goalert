@@ -245,6 +245,12 @@ type NotificationState struct {
 	Status  *NotificationStatus `json:"status"`
 }
 
+type OnCallNotificationInput struct {
+	Weekday int                   `json:"weekday"`
+	Time    timeutil.Clock        `json:"time"`
+	Target  *assignment.RawTarget `json:"target"`
+}
+
 type PageInfo struct {
 	EndCursor   *string `json:"endCursor"`
 	HasNextPage bool    `json:"hasNextPage"`
@@ -334,6 +340,11 @@ type SetLabelInput struct {
 	Target *assignment.RawTarget `json:"target"`
 	Key    string                `json:"key"`
 	Value  string                `json:"value"`
+}
+
+type SetScheduleOnCallNotificationsInput struct {
+	ScheduleID          string                    `json:"scheduleID"`
+	OnCallNotifications []OnCallNotificationInput `json:"onCallNotifications"`
 }
 
 type SetTemporaryScheduleInput struct {

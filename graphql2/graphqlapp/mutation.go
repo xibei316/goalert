@@ -3,10 +3,14 @@ package graphqlapp
 import (
 	context "context"
 	"database/sql"
+	"fmt"
+	"time"
 
 	"github.com/target/goalert/assignment"
 	"github.com/target/goalert/graphql2"
+	"github.com/target/goalert/notificationchannel"
 	"github.com/target/goalert/permission"
+	"github.com/target/goalert/schedule"
 	"github.com/target/goalert/user"
 	"github.com/target/goalert/validation"
 
@@ -30,6 +34,31 @@ func (a *Mutation) SetFavorite(ctx context.Context, input graphql2.SetFavoriteIn
 	}
 	return true, nil
 }
+
+func (a *Mutation) SetScheduleOnCallNotifications(ctx context.Context, input graphql2.SetScheduleOnCallNotificationsInput) (bool, error) {
+	for i, notif := range input.OnCallNotifications {
+		if notif.Target.Type == assignment.TargetTypeSlackChannel {
+			continue
+		}
+		return false, validation.NewFieldError(fmt.Sprintf("onCallNotifications[%d].Target.Type", i), "only slackChannel is supported")
+	}
+
+	err := withContextTx(ctx, a.DB, func(ctx context.Context, tx *sql.Tx) error {
+		var notif []schedule.OnCallNotification
+
+		for _, n := range input.OnCallNotifications {
+			notif = append(notif, schedule.OnCallNotification{
+				Weekday: time.Weekday(n.Weekday),
+				Time:    n.Time,
+				Channel: &notificationchannel.Channel{Type: notificationchannel.TypeSlack, Value: n.Target.ID},
+			})
+		}
+
+		return a.ScheduleStore.SetOnCallNotifications(ctx, tx, input.ScheduleID, notif)
+	})
+	return err == nil, err
+}
+
 func (a *Mutation) SetTemporarySchedule(ctx context.Context, input graphql2.SetTemporaryScheduleInput) (bool, error) {
 	err := withContextTx(ctx, a.DB, func(ctx context.Context, tx *sql.Tx) error {
 		return a.ScheduleStore.SetTemporarySchedule(ctx, tx, input.ScheduleID, input.Start, input.End, input.Shifts)

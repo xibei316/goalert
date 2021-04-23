@@ -286,6 +286,10 @@ input SetScheduleShiftInput {
 }
 
 type Mutation {
+  setScheduleOnCallNotifications(
+    input: SetScheduleOnCallNotificationsInput!
+  ): Boolean!
+
   setTemporarySchedule(input: SetTemporaryScheduleInput!): Boolean!
   clearTemporarySchedules(input: ClearTemporarySchedulesInput!): Boolean!
 
@@ -363,6 +367,17 @@ type Mutation {
 
   setConfig(input: [ConfigValueInput!]): Boolean!
   setSystemLimits(input: [SystemLimitInput!]!): Boolean!
+}
+
+input SetScheduleOnCallNotificationsInput {
+  scheduleID: ID!
+  onCallNotifications: [OnCallNotificationInput!]!
+}
+
+input OnCallNotificationInput {
+  weekday: Int!
+  time: ClockTime!
+  target: TargetInput!
 }
 
 input UpdateAlertsByServiceInput {

@@ -234,6 +234,7 @@ type ComplexityRoot struct {
 		SetConfig                       func(childComplexity int, input []ConfigValueInput) int
 		SetFavorite                     func(childComplexity int, input SetFavoriteInput) int
 		SetLabel                        func(childComplexity int, input SetLabelInput) int
+		SetScheduleOnCallNotifications  func(childComplexity int, input SetScheduleOnCallNotificationsInput) int
 		SetSystemLimits                 func(childComplexity int, input []SystemLimitInput) int
 		SetTemporarySchedule            func(childComplexity int, input SetTemporaryScheduleInput) int
 		TestContactMethod               func(childComplexity int, id string) int
@@ -551,6 +552,7 @@ type IntegrationKeyResolver interface {
 	Href(ctx context.Context, obj *integrationkey.IntegrationKey) (string, error)
 }
 type MutationResolver interface {
+	SetScheduleOnCallNotifications(ctx context.Context, input SetScheduleOnCallNotificationsInput) (bool, error)
 	SetTemporarySchedule(ctx context.Context, input SetTemporaryScheduleInput) (bool, error)
 	ClearTemporarySchedules(ctx context.Context, input ClearTemporarySchedulesInput) (bool, error)
 	DebugCarrierInfo(ctx context.Context, input DebugCarrierInfoInput) (*twilio.CarrierInfo, error)
@@ -1491,6 +1493,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SetLabel(childComplexity, args["input"].(SetLabelInput)), true
+
+	case "Mutation.setScheduleOnCallNotifications":
+		if e.complexity.Mutation.SetScheduleOnCallNotifications == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setScheduleOnCallNotifications_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetScheduleOnCallNotifications(childComplexity, args["input"].(SetScheduleOnCallNotificationsInput)), true
 
 	case "Mutation.setSystemLimits":
 		if e.complexity.Mutation.SetSystemLimits == nil {
@@ -3386,6 +3400,10 @@ input SetScheduleShiftInput {
 }
 
 type Mutation {
+  setScheduleOnCallNotifications(
+    input: SetScheduleOnCallNotificationsInput!
+  ): Boolean!
+
   setTemporarySchedule(input: SetTemporaryScheduleInput!): Boolean!
   clearTemporarySchedules(input: ClearTemporarySchedulesInput!): Boolean!
 
@@ -3463,6 +3481,17 @@ type Mutation {
 
   setConfig(input: [ConfigValueInput!]): Boolean!
   setSystemLimits(input: [SystemLimitInput!]!): Boolean!
+}
+
+input SetScheduleOnCallNotificationsInput {
+  scheduleID: ID!
+  onCallNotifications: [OnCallNotificationInput!]!
+}
+
+input OnCallNotificationInput {
+  weekday: Int!
+  time: ClockTime!
+  target: TargetInput!
 }
 
 input UpdateAlertsByServiceInput {
@@ -4559,6 +4588,21 @@ func (ec *executionContext) field_Mutation_setLabel_args(ctx context.Context, ra
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
 		arg0, err = ec.unmarshalNSetLabelInput2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐSetLabelInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setScheduleOnCallNotifications_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 SetScheduleOnCallNotificationsInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNSetScheduleOnCallNotificationsInput2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐSetScheduleOnCallNotificationsInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -7799,6 +7843,48 @@ func (ec *executionContext) _LabelConnection_pageInfo(ctx context.Context, field
 	res := resTmp.(*PageInfo)
 	fc.Result = res
 	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_setScheduleOnCallNotifications(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_setScheduleOnCallNotifications_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetScheduleOnCallNotifications(rctx, args["input"].(SetScheduleOnCallNotificationsInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_setTemporarySchedule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -17847,6 +17933,42 @@ func (ec *executionContext) unmarshalInputLabelValueSearchOptions(ctx context.Co
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputOnCallNotificationInput(ctx context.Context, obj interface{}) (OnCallNotificationInput, error) {
+	var it OnCallNotificationInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "weekday":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weekday"))
+			it.Weekday, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "time":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("time"))
+			it.Time, err = ec.unmarshalNClockTime2githubᚗcomᚋtargetᚋgoalertᚋutilᚋtimeutilᚐClock(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "target":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("target"))
+			it.Target, err = ec.unmarshalNTargetInput2ᚖgithubᚗcomᚋtargetᚋgoalertᚋassignmentᚐRawTarget(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputRotationSearchOptions(ctx context.Context, obj interface{}) (RotationSearchOptions, error) {
 	var it RotationSearchOptions
 	var asMap = obj.(map[string]interface{})
@@ -18202,6 +18324,34 @@ func (ec *executionContext) unmarshalInputSetLabelInput(ctx context.Context, obj
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("value"))
 			it.Value, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputSetScheduleOnCallNotificationsInput(ctx context.Context, obj interface{}) (SetScheduleOnCallNotificationsInput, error) {
+	var it SetScheduleOnCallNotificationsInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "scheduleID":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scheduleID"))
+			it.ScheduleID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "onCallNotifications":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("onCallNotifications"))
+			it.OnCallNotifications, err = ec.unmarshalNOnCallNotificationInput2ᚕgithubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐOnCallNotificationInputᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -20052,6 +20202,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "setScheduleOnCallNotifications":
+			out.Values[i] = ec._Mutation_setScheduleOnCallNotifications(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "setTemporarySchedule":
 			out.Values[i] = ec._Mutation_setTemporarySchedule(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -23561,6 +23716,32 @@ func (ec *executionContext) marshalNOnCallNotification2ᚕgithubᚗcomᚋtarget�
 	return ret
 }
 
+func (ec *executionContext) unmarshalNOnCallNotificationInput2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐOnCallNotificationInput(ctx context.Context, v interface{}) (OnCallNotificationInput, error) {
+	res, err := ec.unmarshalInputOnCallNotificationInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNOnCallNotificationInput2ᚕgithubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐOnCallNotificationInputᚄ(ctx context.Context, v interface{}) ([]OnCallNotificationInput, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]OnCallNotificationInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNOnCallNotificationInput2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐOnCallNotificationInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
 func (ec *executionContext) marshalNOnCallShift2githubᚗcomᚋtargetᚋgoalertᚋoncallᚐShift(ctx context.Context, sel ast.SelectionSet, v oncall.Shift) graphql.Marshaler {
 	return ec._OnCallShift(ctx, sel, &v)
 }
@@ -23953,6 +24134,11 @@ func (ec *executionContext) unmarshalNSetFavoriteInput2githubᚗcomᚋtargetᚋg
 
 func (ec *executionContext) unmarshalNSetLabelInput2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐSetLabelInput(ctx context.Context, v interface{}) (SetLabelInput, error) {
 	res, err := ec.unmarshalInputSetLabelInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNSetScheduleOnCallNotificationsInput2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐSetScheduleOnCallNotificationsInput(ctx context.Context, v interface{}) (SetScheduleOnCallNotificationsInput, error) {
+	res, err := ec.unmarshalInputSetScheduleOnCallNotificationsInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
