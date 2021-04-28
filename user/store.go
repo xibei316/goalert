@@ -51,6 +51,8 @@ type DB struct {
 	findOne *sql.Stmt
 	findAll *sql.Stmt
 
+	userIsActive *sql.Stmt
+
 	findMany   *sql.Stmt
 	deleteMany *sql.Stmt
 
@@ -95,6 +97,13 @@ func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 			WHERE id = $1
 		`),
 
+		userIsActive: p.P(`
+			SELECT
+   				EXISTS(SELECT * FROM ep_step_on_call_users WHERE user_id= any($1)) OR
+   				EXISTS(SELECT * FROM rotation_participants WHERE user_id= any($1)) OR
+   				EXISTS(SELECT * FROM schedule_on_call_users WHERE user_id= any($1))
+		`),
+
 		delete: p.P(`
 			DELETE FROM users
 			WHERE id = $1
@@ -107,7 +116,6 @@ func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 			WHERE id = any($1)
 		`),
 		deleteMany: p.P(`DELETE FROM users WHERE id = any($1)`),
-
 		findOne: p.P(`
 			SELECT
 				id, name, email, avatar_url, role, alert_status_log_contact_method_id
@@ -162,7 +170,7 @@ func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 }
 
 func (db *DB) DeleteManyTx(ctx context.Context, tx *sql.Tx, ids []string) error {
-	err := permission.LimitCheckAny(ctx, permission.System)
+	err := permission.LimitCheckAny(ctx, permission.Admin)
 	if err != nil {
 		return err
 	}
@@ -173,6 +181,24 @@ func (db *DB) DeleteManyTx(ctx context.Context, tx *sql.Tx, ids []string) error 
 	err = validate.Range("Count", len(ids), 1, 100)
 	if err != nil {
 		return err
+	}
+
+	isActive := db.userIsActive
+	if tx != nil {
+		tx.StmtContext(ctx, isActive)
+	}
+
+	rows, err := isActive.QueryContext(ctx, sqlutil.UUIDArray(ids))
+	if errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		return errors.New("user is currently assigned to one or more rotations, escalation policies or schedules")
 	}
 
 	del := db.deleteMany
