@@ -4,15 +4,11 @@ import Button from '@material-ui/core/Button'
 import MUICardActions from '@material-ui/core/CardActions'
 import IconButton from '@material-ui/core/IconButton'
 import Tooltip from '@material-ui/core/Tooltip'
+import { Grid } from '@material-ui/core'
 
-interface CardActionProps {
+interface CardActionsProps {
   primaryActions?: Array<Action | JSX.Element>
   secondaryActions?: Array<Action | JSX.Element>
-}
-
-interface ActionProps {
-  action: Action
-  secondary?: boolean // if true, renders right-aligned as an icon button
 }
 
 export type Action = {
@@ -23,69 +19,64 @@ export type Action = {
 }
 
 const useStyles = makeStyles({
-  cardActions: {
-    alignItems: 'flex-end', // aligns icon buttons to bottom of container
-  },
-  primaryActionsContainer: {
+  p8: {
     padding: 8,
   },
-  autoExpandWidth: {
-    margin: '0 auto',
+  primaryActions: {
+    display: 'flex',
+    alignItems: 'end',
+  },
+  secondaryActions: {
+    display: 'flex',
+    alignItems: 'end',
+    marginRight: -8,
+    marginBottom: -8,
   },
 })
 
-export default function CardActions(p: CardActionProps): JSX.Element {
-  const classes = useStyles()
+function makeActions(
+  actions?: Array<Action | JSX.Element>,
+  secondary?: boolean,
+): JSX.Element[] {
+  if (!actions) return []
 
-  const action = (
-    action: Action | JSX.Element,
-    key: string,
-    secondary?: boolean,
-  ): JSX.Element => {
-    if ('label' in action && 'handleOnClick' in action) {
-      return <Action key={key} action={action} secondary={secondary} />
+  return actions.map((action, i) => {
+    if (!('label' in action && 'handleOnClick' in action)) {
+      // generic JSX element
+      return action
     }
-    return action
-  }
 
-  let actions: Array<JSX.Element> = []
-  if (p.primaryActions) {
-    actions = [
-      <div
-        key='primary-actions-container'
-        className={classes.primaryActionsContainer}
-      >
-        {p.primaryActions.map((a, i) => action(a, 'primary' + i))}
-      </div>,
-    ]
-  }
-  if (p.secondaryActions) {
-    actions = [
-      ...actions,
-      <div key='actions-margin' className={classes.autoExpandWidth} />,
-      ...p.secondaryActions.map((a, i) => action(a, 'secondary' + i, true)),
-    ]
-  }
+    if (secondary) {
+      return (
+        <Tooltip key={i} title={action.label} placement='top'>
+          <IconButton onClick={action.handleOnClick}>{action.icon}</IconButton>
+        </Tooltip>
+      )
+    }
 
-  return (
-    <MUICardActions data-cy='card-actions' className={classes.cardActions}>
-      {actions}
-    </MUICardActions>
-  )
+    return (
+      <Button key={i} onClick={action.handleOnClick} startIcon={action.icon}>
+        {action.label}
+      </Button>
+    )
+  })
 }
 
-function Action(p: ActionProps): JSX.Element {
-  const { action, secondary } = p
-  if (secondary && action.icon) {
-    return (
-      <Tooltip title={action.label} placement='top'>
-        <IconButton onClick={action.handleOnClick}>{action.icon}</IconButton>
-      </Tooltip>
-    )
-  }
+export default function CardActions(p: CardActionsProps): JSX.Element {
+  const classes = useStyles()
+  const primaryActions = makeActions(p.primaryActions)
+  const secondaryActions = makeActions(p.secondaryActions, true)
+
   return (
-    <Button onClick={action.handleOnClick} startIcon={action.icon}>
-      {action.label}
-    </Button>
+    <MUICardActions data-cy='card-actions'>
+      <Grid container justify='space-between' className={classes.p8}>
+        <Grid item className={classes.primaryActions}>
+          {primaryActions}
+        </Grid>
+        <Grid item className={classes.secondaryActions}>
+          {secondaryActions}
+        </Grid>
+      </Grid>
+    </MUICardActions>
   )
 }
