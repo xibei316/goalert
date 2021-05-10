@@ -75,6 +75,8 @@ func getProtoC(version, output string) {
 		variant = "linux-x86_64"
 	case "linux-386":
 		variant = "linux-x86_32"
+	case "linux-arm64":
+		variant = "linux-aarch_64"
 	case "darwin-amd64":
 		variant = "osx-x86_64"
 	case "windows-amd64":
