@@ -86,7 +86,7 @@ func getProtoC(version, output string) {
 		variant = "win32"
 		binFile = "bin/protoc.exe"
 	default:
-		log.Fatalf("unsupported OS/Arch combination")
+		log.Fatalf("unsupported OS/Arch combination '%s'", runtime.GOOS+"-"+runtime.GOARCH)
 	}
 
 	url := fmt.Sprintf("https://github.com/protocolbuffers/protobuf/releases/download/v%s/protoc-%s-%s.zip",
