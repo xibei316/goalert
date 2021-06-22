@@ -117,8 +117,10 @@ func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 
 		findMany: p.P(`
 			SELECT
-				id, name, email, avatar_url, role, alert_status_log_contact_method_id
+				id, name, email, avatar_url, role, alert_status_log_contact_method_id, fav is distinct from null
 			FROM users
+			LEFT JOIN user_favorites fav ON
+				fav.tgt_user_id = e.id AND fav.user_id = $2
 			WHERE id = any($1)
 		`),
 
@@ -130,8 +132,10 @@ func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 
 		findOne: p.P(`
 			SELECT
-				id, name, email, avatar_url, role, alert_status_log_contact_method_id
+				id, name, email, avatar_url, role, alert_status_log_contact_method_id, fav is distinct from null
 			FROM users
+			LEFT JOIN user_favorites fav ON
+				fav.tgt_user_id = id AND fav.user_id = $2
 			WHERE id = $1
 		`),
 		findOneForUpdate: p.P(`
@@ -502,7 +506,9 @@ func (db *DB) FindMany(ctx context.Context, ids []string) ([]User, error) {
 		return nil, err
 	}
 
-	rows, err := db.findMany.QueryContext(ctx, sqlutil.UUIDArray(ids))
+	userID := permission.UserID(ctx)
+
+	rows, err := db.findMany.QueryContext(ctx, sqlutil.UUIDArray(ids), userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
