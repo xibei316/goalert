@@ -105,7 +105,6 @@ export default function QueryList(props: QueryListProps): JSX.Element {
 
   const searchParam = useSelector(searchSelector)
   const urlKey = useURLKey()
-  console.log(urlKey)
   const aliasedQuery = useMemo(() => fieldAlias(query, 'data'), [query])
 
   const queryVariables = {
