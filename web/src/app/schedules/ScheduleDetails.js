@@ -32,9 +32,8 @@ const query = gql`
   }
 `
 
-export default function ScheduleDetails({ scheduleID }) {
+export default function ScheduleDetails({ scheduleID, onDelete }) {
   const [showEdit, setShowEdit] = useState(false)
-  const [showDelete, setShowDelete] = useState(false)
   const [configTempSchedule, setConfigTempSchedule] = useState(null)
   const [deleteTempSchedule, setDeleteTempSchedule] = useState(null)
 
@@ -59,7 +58,7 @@ export default function ScheduleDetails({ scheduleID }) {
   if (error) return <GenericError error={error.message} />
 
   if (!data) {
-    return showDelete ? <Redirect to='/schedules' push /> : <ObjectNotFound />
+    return <ObjectNotFound />
   }
 
   return (
@@ -68,12 +67,6 @@ export default function ScheduleDetails({ scheduleID }) {
         <ScheduleEditDialog
           scheduleID={scheduleID}
           onClose={() => setShowEdit(false)}
-        />
-      )}
-      {showDelete && (
-        <ScheduleDeleteDialog
-          scheduleID={scheduleID}
-          onClose={() => setShowDelete(false)}
         />
       )}
       {configTempSchedule && (
@@ -118,7 +111,7 @@ export default function ScheduleDetails({ scheduleID }) {
           {
             label: 'Delete',
             icon: <Delete />,
-            handleOnClick: () => setShowDelete(true),
+            handleOnClick: onDelete,
           },
           <QuerySetFavoriteButton
             key='secondary-action-favorite'

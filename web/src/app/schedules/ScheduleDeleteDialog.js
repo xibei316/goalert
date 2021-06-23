@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useQuery, useMutation, gql } from '@apollo/client'
 import p from 'prop-types'
+import { Redirect } from 'react-router-dom'
 import { get } from 'lodash'
 import FormDialog from '../dialogs/FormDialog'
 import Spinner from '../loading/components/Spinner'
@@ -24,7 +25,13 @@ export default function ScheduleDeleteDialog(props) {
     onClose: p.func,
     variables: { id: props.scheduleID },
   })
+  const [name, setName] = useState(get(data, 'schedule.name'))
+  useEffect(() => {
+    if (data?.schedule?.name) setName(data?.schedule?.name)
+  }, [data?.schedule?.name])
+
   const [deleteSchedule, deleteScheduleStatus] = useMutation(mutation, {
+    onCompleted: props.onClose,
     variables: {
       input: [
         {
@@ -38,16 +45,19 @@ export default function ScheduleDeleteDialog(props) {
   if (!data && dataLoading) return <Spinner />
 
   return (
-    <FormDialog
-      title='Are you sure?'
-      confirm
-      subTitle={`This will delete the schedule: ${get(data, 'schedule.name')}`}
-      caption='Deleting a schedule will also delete all associated rules and overrides.'
-      loading={deleteScheduleStatus.loading}
-      errors={deleteScheduleStatus.error ? [deleteScheduleStatus.error] : []}
-      onClose={props.onClose}
-      onSubmit={() => deleteSchedule()}
-    />
+    <React.Fragment>
+      {deleteScheduleStatus.called && <Redirect to='/schedules' />}
+      <FormDialog
+        title='Are you sure?'
+        confirm
+        subTitle={`This will delete the schedule: ${name}`}
+        caption='Deleting a schedule will also delete all associated rules and overrides.'
+        loading={deleteScheduleStatus.loading}
+        errors={deleteScheduleStatus.error ? [deleteScheduleStatus.error] : []}
+        onClose={props.onClose}
+        onSubmit={() => deleteSchedule()}
+      />
+    </React.Fragment>
   )
 }
 
