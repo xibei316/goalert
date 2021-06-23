@@ -1,6 +1,7 @@
 import { urlParamSelector, urlPathSelector } from '../selectors'
 import { setURLParam as setParam, resetURLParams as resetParams } from './main'
 import { useSelector, useDispatch } from 'react-redux'
+import { useLocation } from 'react-router'
 import { warn } from '../util/debug'
 
 export type Value = string | boolean | number | string[]
@@ -41,4 +42,11 @@ export function useResetURLParams(...keys: Array<string>): () => void {
   }
 
   return resetURLParams
+}
+
+// useURLKey provides a unique identifier per page
+// e.g. location.key as provided by React Router
+export function useURLKey(): string {
+  const l = useLocation()
+  return l.key ?? ''
 }

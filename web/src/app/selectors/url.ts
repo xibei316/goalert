@@ -13,8 +13,6 @@ export const urlQuerySelector = (state: ReduxState): string =>
   state.router.location.search
 export const urlPathSelector = (state: ReduxState): string =>
   state.router.location.pathname
-export const urlKeySelector = (state: ReduxState): string | undefined =>
-  state.router.location.key
 
 export const urlSearchParamsSelector = createSelector(
   urlQuerySelector,

@@ -12,12 +12,11 @@ import {
   PaginatedListItemProps,
   PaginatedListProps,
 } from './PaginatedList'
-import { useSelector } from 'react-redux'
-import { urlKeySelector } from '../selectors/url'
 import classnames from 'classnames'
 import OtherActions from '../util/OtherActions'
 import { ArrowDropDown } from '@material-ui/icons'
 import Search from '../util/Search'
+import { useURLKey } from '../actions'
 
 const useStyles = makeStyles({
   actionsContainer: {
@@ -90,6 +89,8 @@ export default function ControlledPaginatedList(
   props: ControlledPaginatedListProps,
 ): JSX.Element {
   const classes = useStyles()
+  const urlKey = useURLKey()
+
   const {
     checkboxActions,
     secondaryActions,
@@ -124,7 +125,6 @@ export default function ControlledPaginatedList(
   const checkedItems = _checkedItems.filter((id) =>
     getSelectableIDs().includes(id),
   )
-  const urlKey = useSelector(urlKeySelector)
 
   function setAll(): void {
     setCheckedItems(getSelectableIDs())
