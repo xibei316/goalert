@@ -44,9 +44,9 @@ const useStyles = makeStyles((theme) => ({
     zIndex: theme.zIndex.drawer + 1,
   },
   containerClass: {
+    width: '75%',
     padding: '1em',
-    [theme.breakpoints.up('md')]: { width: '75%' },
-    [theme.breakpoints.down('sm')]: { width: '100%' },
+    transition: 'all 1s',
   },
 }))
 
@@ -118,12 +118,18 @@ export default function App() {
                 justify='center'
                 className={classes.mainContainer}
               >
-                <Grid className={classes.containerClass} item>
+                <Grid
+                  id='main-grid-item'
+                  className={classes.containerClass}
+                  // xs={9}
+                  item
+                >
                   <Switch>
                     {renderRoutes(routeConfig)}
                     <Route component={() => <LazyPageNotFound />} />
                   </Switch>
                 </Grid>
+                <Grid item xs={12} id='main-full-width-content' />
               </Grid>
             </ErrorBoundary>
           </main>

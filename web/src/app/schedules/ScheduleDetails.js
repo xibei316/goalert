@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import p from 'prop-types'
 import { gql, useQuery } from '@apollo/client'
 import { Redirect } from 'react-router-dom'
@@ -43,6 +43,14 @@ export default function ScheduleDetails({ scheduleID }) {
   const onNewTempSched = useCallback(() => setConfigTempSchedule(true), [])
   const onEditTempSched = useCallback(setConfigTempSchedule, [])
   const onDeleteTempSched = useCallback(setDeleteTempSchedule, [])
+
+  useEffect(() => {
+    const elem = document.getElementById('main-grid-item')
+    elem.style = 'transition:all 1s; width:100%;'
+    return () => {
+      elem.style = 'transition:all 1s; width:75%;'
+    }
+  }, [])
 
   const {
     data: _data,

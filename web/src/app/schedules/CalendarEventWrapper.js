@@ -4,10 +4,25 @@ import Button from '@material-ui/core/Button'
 import Grid from '@material-ui/core/Grid'
 import Popover from '@material-ui/core/Popover'
 import Typography from '@material-ui/core/Typography'
-import { makeStyles } from '@material-ui/core'
+import {
+  Card,
+  CardActions,
+  CardContent,
+  CardHeader,
+  IconButton,
+  makeStyles,
+} from '@material-ui/core'
 import { DateTime } from 'luxon'
+import { useCalendarNavigation } from './hooks'
+import { Close } from '@material-ui/icons'
 
 const useStyles = makeStyles({
+  pb0: {
+    paddingBottom: 0,
+  },
+  pt0: {
+    paddingTop: 0,
+  },
   button: {
     padding: '4px',
     minHeight: 0,
@@ -21,8 +36,8 @@ const useStyles = makeStyles({
     flexGrow: 1,
   },
   paper: {
-    padding: 8,
-    maxWidth: 275,
+    // padding: 8,
+    maxWidth: 500,
   },
 })
 
@@ -35,6 +50,7 @@ export const EventHandlerContext = React.createContext({
 export default function CalendarEventWrapper({ children, event }) {
   const classes = useStyles()
   const [anchorEl, setAnchorEl] = useState(null)
+  const { weekly } = useCalendarNavigation()
   const { onOverrideClick, onEditTempSched, onDeleteTempSched } =
     useContext(EventHandlerContext)
   const open = Boolean(anchorEl)
@@ -44,7 +60,7 @@ export default function CalendarEventWrapper({ children, event }) {
     setAnchorEl(event.currentTarget)
   }
 
-  function handleCloseShiftInfo() {
+  function handleOnClose() {
     setAnchorEl(null)
   }
 
@@ -56,7 +72,7 @@ export default function CalendarEventWrapper({ children, event }) {
   }
 
   function handleShowOverrideForm(type) {
-    handleCloseShiftInfo()
+    handleOnClose()
 
     onOverrideClick({
       variant: type,
@@ -111,31 +127,26 @@ export default function CalendarEventWrapper({ children, event }) {
   function renderOverrideButtons() {
     return (
       <React.Fragment>
-        <Grid item>
-          <Button
-            data-cy='replace-override'
-            size='small'
-            onClick={() => handleShowOverrideForm('replace')}
-            variant='contained'
-            color='primary'
-            title={`Temporarily replace ${event.title} from this schedule`}
-          >
-            Replace
-          </Button>
-        </Grid>
-        <Grid item className={classes.flexGrow} />
-        <Grid item>
-          <Button
-            data-cy='remove-override'
-            size='small'
-            onClick={() => handleShowOverrideForm('remove')}
-            variant='contained'
-            color='primary'
-            title={`Temporarily remove ${event.title} from this schedule`}
-          >
-            Remove
-          </Button>
-        </Grid>
+        <Button
+          data-cy='replace-override'
+          size='small'
+          onClick={() => handleShowOverrideForm('replace')}
+          variant='contained'
+          color='primary'
+          title={`Temporarily replace ${event.title} from this schedule`}
+        >
+          Replace
+        </Button>
+        <Button
+          data-cy='remove-override'
+          size='small'
+          onClick={() => handleShowOverrideForm('remove')}
+          variant='contained'
+          color='primary'
+          title={`Temporarily remove ${event.title} from this schedule`}
+        >
+          Remove
+        </Button>
       </React.Fragment>
     )
   }
@@ -159,14 +170,25 @@ export default function CalendarEventWrapper({ children, event }) {
       DateTime.fromJSDate(date).toLocaleString(DateTime.DATETIME_FULL)
 
     return (
-      <Grid container spacing={1}>
-        <Grid item xs={12}>
-          <Typography variant='body2'>
+      <Card>
+        <CardHeader
+          action={
+            <IconButton size='small' onClick={handleOnClose}>
+              <Close />
+            </IconButton>
+          }
+          className={classes.pb0}
+        />
+        <CardContent className={classes.pt0}>
+          <Typography gutterBottom variant='h6' component='h3'>
+            {event.title}
+          </Typography>
+          <Typography variant='body2' color='textSecondary' component='p'>
             {`${fmt(event.start)}  –  ${fmt(event.end)}`}
           </Typography>
-        </Grid>
-        {renderButtons()}
-      </Grid>
+        </CardContent>
+        <CardActions>{renderButtons()}</CardActions>
+      </Card>
     )
   }
 
@@ -177,14 +199,14 @@ export default function CalendarEventWrapper({ children, event }) {
         id={id}
         open={open}
         anchorEl={anchorEl}
-        onClose={handleCloseShiftInfo}
+        onClose={handleOnClose}
         anchorOrigin={{
-          vertical: 'bottom',
+          vertical: 'top',
           horizontal: 'left',
         }}
         transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
+          vertical: weekly ? 'top' : 'center',
+          horizontal: 'right',
         }}
         PaperProps={{
           'data-cy': 'shift-tooltip',
