@@ -46,9 +46,13 @@ export default function ScheduleDetails({ scheduleID }) {
 
   useEffect(() => {
     const elem = document.getElementById('main-grid-item')
-    elem.style = 'transition:all 1s; width:100%;'
+    const t = setTimeout(() => {
+      elem.style = 'transition:all 1s; width:100%;'
+    }, 1000)
+
     return () => {
       elem.style = 'transition:all 1s; width:75%;'
+      clearTimeout(t)
     }
   }, [])
 

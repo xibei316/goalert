@@ -4,25 +4,11 @@ import Button from '@material-ui/core/Button'
 import Grid from '@material-ui/core/Grid'
 import Popover from '@material-ui/core/Popover'
 import Typography from '@material-ui/core/Typography'
-import {
-  Card,
-  CardActions,
-  CardContent,
-  CardHeader,
-  IconButton,
-  makeStyles,
-} from '@material-ui/core'
+import { Card, CardActions, CardContent, makeStyles } from '@material-ui/core'
 import { DateTime } from 'luxon'
 import { useCalendarNavigation } from './hooks'
-import { Close } from '@material-ui/icons'
 
 const useStyles = makeStyles({
-  pb0: {
-    paddingBottom: 0,
-  },
-  pt0: {
-    paddingTop: 0,
-  },
   button: {
     padding: '4px',
     minHeight: 0,
@@ -47,10 +33,43 @@ export const EventHandlerContext = React.createContext({
   onDeleteTempSched: () => {},
 })
 
+function useAnchorOrigins(event) {
+  const { weekly } = useCalendarNavigation()
+  const start = DateTime.fromJSDate(event.start)
+  const end = DateTime.fromJSDate(event.end)
+  const sunMonTues = [7, 1, 2].includes(end.weekday)
+  const multiDay = start.day !== end.day
+  let anchorOrigin, transformOrigin
+
+  if (weekly) {
+    anchorOrigin = {
+      vertical: multiDay ? 'bottom' : 'top',
+      horizontal: sunMonTues && !multiDay ? 'right' : 'left',
+    }
+
+    transformOrigin = {
+      vertical: 'top',
+      horizontal: sunMonTues || multiDay ? 'left' : 'right',
+    }
+  } else {
+    anchorOrigin = {
+      vertical: 'bottom',
+      horizontal: 'left',
+    }
+
+    transformOrigin = {
+      vertical: 'top',
+      horizontal: 'left',
+    }
+  }
+
+  return [anchorOrigin, transformOrigin]
+}
+
 export default function CalendarEventWrapper({ children, event }) {
   const classes = useStyles()
   const [anchorEl, setAnchorEl] = useState(null)
-  const { weekly } = useCalendarNavigation()
+  const [anchorOrigin, transformOrigin] = useAnchorOrigins(event)
   const { onOverrideClick, onEditTempSched, onDeleteTempSched } =
     useContext(EventHandlerContext)
   const open = Boolean(anchorEl)
@@ -171,15 +190,7 @@ export default function CalendarEventWrapper({ children, event }) {
 
     return (
       <Card>
-        <CardHeader
-          action={
-            <IconButton size='small' onClick={handleOnClose}>
-              <Close />
-            </IconButton>
-          }
-          className={classes.pb0}
-        />
-        <CardContent className={classes.pt0}>
+        <CardContent>
           <Typography gutterBottom variant='h6' component='h3'>
             {event.title}
           </Typography>
@@ -200,14 +211,8 @@ export default function CalendarEventWrapper({ children, event }) {
         open={open}
         anchorEl={anchorEl}
         onClose={handleOnClose}
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: weekly ? 'top' : 'center',
-          horizontal: 'right',
-        }}
+        anchorOrigin={anchorOrigin}
+        transformOrigin={transformOrigin}
         PaperProps={{
           'data-cy': 'shift-tooltip',
         }}
