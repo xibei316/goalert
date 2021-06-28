@@ -15,6 +15,7 @@ const query = gql`
         id
         name
         email
+        isFavorite
       }
       pageInfo {
         hasNextPage
@@ -36,6 +37,7 @@ function UserList(): JSX.Element {
           title: n.name,
           subText: n.email,
           url: n.id,
+          isFavorite: n.isFavorite,
           icon: <UserAvatar userID={n.id} />,
         })}
         mapVariables={(vars) => {

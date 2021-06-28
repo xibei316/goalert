@@ -1,6 +1,7 @@
 import { testScreen } from '../support'
 import { Chance } from 'chance'
 import { Schedule } from '../../schema'
+import { useReducer } from 'react'
 
 const c = new Chance()
 
@@ -142,6 +143,12 @@ function testFavorites(): void {
         .get('button[title=Edit]')
         .click()
         .get('input[name=escalation-policy]'),
+  )
+
+  check(
+    'User',
+    'user',
+    (name: string, favorite: boolean) => () =>
   )
 }
 

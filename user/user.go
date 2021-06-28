@@ -34,7 +34,7 @@ type User struct {
 	// The Role of the user
 	Role permission.Role `json:"role" store:"readonly"`
 
-	// isUserFavorite returns true if a user is favorited by the current user. 
+	// isUserFavorite returns true if a single user is favorited by the current user.
 	isUserFavorite bool
 }
 
@@ -62,7 +62,7 @@ func (u *User) scanFrom(fn scanFn) error {
 		&u.AvatarURL,
 		&u.Role,
 		&statusCM,
-		&u.isUserFavorite
+		&u.isUserFavorite,
 	)
 	u.AlertStatusCMID = statusCM.String
 	return err
@@ -134,7 +134,7 @@ func (u User) Normalize() (*User, error) {
 	return &u, nil
 }
 
-// IsUserFavorite returns true if this policy is a favorite of the current user.
-func (p Policy) IsUserFavorite() bool {
-	return p.isUserFavorite
+// IsUserFavorite returns true if a user is a favorite of the current user.
+func (u User) IsUserFavorite() bool {
+	return u.isUserFavorite
 }

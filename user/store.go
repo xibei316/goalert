@@ -117,11 +117,11 @@ func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 
 		findMany: p.P(`
 			SELECT
-				id, name, email, avatar_url, role, alert_status_log_contact_method_id, fav is distinct from null
-			FROM users
+				u.id, u.name, u.email, u.avatar_url, u.role, u.alert_status_log_contact_method_id, fav is distinct from null
+			FROM users u
 			LEFT JOIN user_favorites fav ON
-				fav.tgt_user_id = e.id AND fav.user_id = $2
-			WHERE id = any($1)
+				fav.tgt_user_id = u.id AND fav.user_id = $2
+			WHERE u.id = any($1)
 		`),
 
 		deleteOne:          p.P(`DELETE FROM users WHERE id = $1`),
@@ -132,11 +132,11 @@ func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 
 		findOne: p.P(`
 			SELECT
-				id, name, email, avatar_url, role, alert_status_log_contact_method_id, fav is distinct from null
-			FROM users
+				u.id, u.name, u.email, u.avatar_url, u.role, u.alert_status_log_contact_method_id, fav is distinct from null
+			FROM users u
 			LEFT JOIN user_favorites fav ON
-				fav.tgt_user_id = id AND fav.user_id = $2
-			WHERE id = $1
+				fav.tgt_user_id = u.id AND fav.user_id = $2
+			WHERE u.id = $1
 		`),
 		findOneForUpdate: p.P(`
 			SELECT
