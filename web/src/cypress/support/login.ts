@@ -19,32 +19,9 @@ function login(
       .then((p) => login(username, p.password, tokenOnly))
   }
 
-  if (tokenOnly) {
-    return cy
-      .request({
-        url: '/api/v2/identity/providers/basic?noRedirect=1',
-        method: 'POST',
-        form: true, // indicates the body should be form urlencoded and sets Content-Type: application/x-www-form-urlencoded headers
-        body: {
-          username,
-          password,
-        },
-        followRedirect: false,
-        headers: {
-          referer: Cypress.config('baseUrl'),
-          Cookie: '',
-        },
-      })
-      .then((res) => {
-        return res.body as string
-      })
-  }
-
-  cy.clearCookie('goalert_session.2')
-
   return cy
     .request({
-      url: '/api/v2/identity/providers/basic',
+      url: '/api/v2/identity/providers/basic?noRedirect=1',
       method: 'POST',
       form: true, // indicates the body should be form urlencoded and sets Content-Type: application/x-www-form-urlencoded headers
       body: {
@@ -58,11 +35,14 @@ function login(
       },
     })
     .then((res) => {
-      expect(res.redirectedToUrl, 'response redirect').to.eq(
-        normalizeURL(Cypress.config('baseUrl')),
-      )
-      return ''
-    }) as Cypress.Chainable<string>
+      const token = res.body as string
+      if (!tokenOnly) {
+        cy.clearCookies()
+        cy.setCookie('goalert_session.2', token)
+        return ''
+      }
+      return token
+    })
 }
 
 function adminLogin(tokenOnly = false): Cypress.Chainable<string> {
