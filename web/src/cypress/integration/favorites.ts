@@ -147,8 +147,10 @@ function testFavorites(): void {
 
   check(
     'User',
-    'user',
-    (name: string, favorite: boolean) => () =>
+    'users',
+    (name: string, favorite: boolean) =>
+      cy.createUser({ name, favorite }).then((user: Profile) => user.id),
+    () => cy.pageFab().get('input[name=users]'),
   )
 }
 
