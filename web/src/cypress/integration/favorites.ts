@@ -1,6 +1,6 @@
 import { testScreen } from '../support'
 import { Chance } from 'chance'
-import { Schedule } from '../../schema'
+import { Schedule, User } from '../../schema'
 import { useReducer } from 'react'
 
 const c = new Chance()
@@ -9,6 +9,7 @@ function check(
   typeName: string,
   urlPrefix: string,
   createFunc: (name: string, fav: boolean) => Cypress.Chainable<string>,
+  setUserFavorite: (id: string) => Cypress.Chainable<JQuery<HTMLElement>>,
   getSearchSelectFunc?: () => Cypress.Chainable<JQuery<HTMLElement>>,
   getSearchSelectItemsFunc?: (
     sel: Cypress.Chainable<JQuery<HTMLElement>>,
@@ -150,7 +151,11 @@ function testFavorites(): void {
     'users',
     (name: string, favorite: boolean) =>
       cy.createUser({ name, favorite }).then((user: Profile) => user.id),
-    () => cy.pageFab().get('input[name=users]'),
+    () =>
+      cy
+        .setUserFavorite()
+        .then((res: GraphQLResponse) => (res = res.user.isFavorite)),
+    cy.pageFab().get('input[name=users]'),
   )
 }
 
