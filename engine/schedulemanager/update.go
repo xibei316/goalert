@@ -233,6 +233,9 @@ func (db *DB) update(ctx context.Context) error {
 			if r.Time != nil {
 				continue
 			}
+			if r.WeekdayFilter != nil && !r.WeekdayFilter.Day(now.In(tz[schedID]).Weekday()) {
+				continue
+			}
 
 			needsOnCallNotification[schedID] = r.ChannelID
 		}

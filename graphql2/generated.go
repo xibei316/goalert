@@ -3779,7 +3779,7 @@ input OnCallNotificationRuleInput {
 
   # weekdayFilter indicates which days of the week this rule is evaluated.
   #
-  # It is required for time-of-day notifications and must be null if time is null.
+  # If weekdayFilter is null, the rule will be active every day.
   weekdayFilter: WeekdayFilter
 }
 
