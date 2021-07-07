@@ -10,7 +10,6 @@ function createManyUsers(
     name: user.name || c.word({ length: 12 }),
     email: user.email || c.email(),
     role: user.role || 'user',
-    isFavorite: user.favorite || false,
   }))
 
   const dbQuery =
