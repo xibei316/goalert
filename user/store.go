@@ -17,8 +17,34 @@ import (
 	"github.com/target/goalert/validation/validate"
 )
 
-// Store allows managing users.
-type Store struct {
+// Store allows the lookup and management of Users.
+type Store interface {
+	Insert(context.Context, *User) (*User, error)
+	InsertTx(context.Context, *sql.Tx, *User) (*User, error)
+	Update(context.Context, *User) error
+	UpdateTx(context.Context, *sql.Tx, *User) error
+	SetUserRoleTx(ctx context.Context, tx *sql.Tx, id string, role permission.Role) error
+	Delete(context.Context, string) error
+	DeleteManyTx(context.Context, *sql.Tx, []string) error
+	FindOne(context.Context, string) (*User, error)
+	FindOneTx(ctx context.Context, tx *sql.Tx, id string, forUpdate bool) (*User, error)
+	FindAll(context.Context) ([]User, error)
+	FindMany(context.Context, []string) ([]User, error)
+	Search(context.Context, *SearchOptions) ([]User, error)
+
+	UserExists(context.Context) (ExistanceChecker, error)
+
+	AddAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubject) error
+	DeleteAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubject) error
+	FindAllAuthSubjectsForUser(ctx context.Context, userID string) ([]AuthSubject, error)
+	AuthSubjectsFunc(ctx context.Context, providerID, userID string, f func(AuthSubject) error) error
+	FindSomeAuthSubjectsForProvider(ctx context.Context, limit int, afterSubjectID, providerID string) ([]AuthSubject, error)
+}
+
+var _ Store = &DB{}
+
+// DB implements the Store against a *sql.DB backend.
+type DB struct {
 	db *sql.DB
 
 	ids *sql.Stmt
@@ -54,10 +80,10 @@ type Store struct {
 
 var grpN int64
 
-// NewStore will create new Store for the sql.DB. An error will be returned if statements fail to prepare.
-func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
+// NewDB will create a DB backend from a sql.DB. An error will be returned if statements fail to prepare.
+func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 	p := &util.Prepare{DB: db, Ctx: ctx}
-	store := &Store{
+	store := &DB{
 		db: db,
 
 		userExist: make(chan map[uuid.UUID]struct{}, 1),
@@ -159,13 +185,8 @@ func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
 	return store, nil
 }
 
-// AuthSubjectsFunc will call the provided forEachFn for each AuthSubject.
-// If an error is returned by forEachFn it will stop reading subjects and be returned.
-//
-// providerID, if not empty, will limit AuthSubjects to those with the same providerID.
-// userID, if not empty, will limit AuthSubjects to those assigned to the given userID.
-func (s *Store) AuthSubjectsFunc(ctx context.Context, providerID, userID string, forEachFn func(AuthSubject) error) error {
-	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
+func (db *DB) AuthSubjectsFunc(ctx context.Context, providerID, userID string, forEachFn func(AuthSubject) error) error {
+	err := permission.LimitCheckAny(ctx, permission.System)
 	if err != nil {
 		return err
 	}
@@ -188,7 +209,7 @@ func (s *Store) AuthSubjectsFunc(ctx context.Context, providerID, userID string,
 		Valid:  userID != "",
 	}
 
-	rows, err := s.findAuthSubjects.QueryContext(ctx, pID, uID)
+	rows, err := db.findAuthSubjects.QueryContext(ctx, pID, uID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
@@ -211,9 +232,7 @@ func (s *Store) AuthSubjectsFunc(ctx context.Context, providerID, userID string,
 	return nil
 }
 
-// DeleteManyTx will delete multiple users within the same transaction. If tx is nil,
-// a transaction will be started and committed before returning.
-func (s *Store) DeleteManyTx(ctx context.Context, tx *sql.Tx, ids []string) error {
+func (db *DB) DeleteManyTx(ctx context.Context, tx *sql.Tx, ids []string) error {
 	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
 	if err != nil {
 		return err
@@ -230,7 +249,7 @@ func (s *Store) DeleteManyTx(ctx context.Context, tx *sql.Tx, ids []string) erro
 	var ownsTx bool
 	if tx == nil {
 		ownsTx = true
-		tx, err = s.db.BeginTx(ctx, nil)
+		tx, err = db.db.BeginTx(ctx, nil)
 		if err != nil {
 			return err
 		}
@@ -238,7 +257,7 @@ func (s *Store) DeleteManyTx(ctx context.Context, tx *sql.Tx, ids []string) erro
 	}
 
 	for _, id := range ids {
-		err = s.retryDeleteTx(ctx, tx, id)
+		err = db.retryDeleteTx(ctx, tx, id)
 		if err != nil {
 			return err
 		}
@@ -251,30 +270,18 @@ func (s *Store) DeleteManyTx(ctx context.Context, tx *sql.Tx, ids []string) erro
 	return nil
 }
 
-func withTx(ctx context.Context, tx *sql.Tx, stmt *sql.Stmt) *sql.Stmt {
-	if tx == nil {
-		return stmt
-	}
-
-	return tx.StmtContext(ctx, stmt)
-}
-func (s *Store) requireTx(ctx context.Context, tx *sql.Tx, fn func(*sql.Tx) error) error {
-	return nil
-}
-
-// InsertTx creates a new User.
-func (s *Store) InsertTx(ctx context.Context, tx *sql.Tx, u *User) (*User, error) {
-	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
-	if err != nil {
-		return nil, err
-	}
-
+// InsertTx implements the Store interface by inserting the new User into the database.
+// The insert statement is first wrapped in tx.
+func (db *DB) InsertTx(ctx context.Context, tx *sql.Tx, u *User) (*User, error) {
 	n, err := u.Normalize()
 	if err != nil {
 		return nil, err
 	}
-
-	_, err = withTx(ctx, tx, s.insert).ExecContext(ctx, n.fields()...)
+	err = permission.LimitCheckAny(ctx, permission.System, permission.Admin)
+	if err != nil {
+		return nil, err
+	}
+	_, err = tx.Stmt(db.insert).ExecContext(ctx, n.fields()...)
 	if err != nil {
 		return nil, err
 	}
@@ -282,11 +289,31 @@ func (s *Store) InsertTx(ctx context.Context, tx *sql.Tx, u *User) (*User, error
 	return n, nil
 }
 
-// Insert is equivalent to calling InsertTx(ctx, nil, u).
-func (s *Store) Insert(ctx context.Context, u *User) (*User, error) { return s.InsertTx(ctx, nil, u) }
+// Insert implements the Store interface by inserting the new User into the database.
+func (db *DB) Insert(ctx context.Context, u *User) (*User, error) {
+	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
+	if err != nil {
+		return nil, err
+	}
+	tx, err := db.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
-// DeleteTx deletes a User with the given ID.
-func (s *Store) DeleteTx(ctx context.Context, tx *sql.Tx, id string) error {
+	u, err = db.InsertTx(ctx, tx, u)
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
+}
+
+func (db *DB) DeleteTx(ctx context.Context, tx *sql.Tx, id string) error {
 	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
 	if err != nil {
 		return err
@@ -296,13 +323,12 @@ func (s *Store) DeleteTx(ctx context.Context, tx *sql.Tx, id string) error {
 	if err != nil {
 		return err
 	}
-
-	return s.requireTx(ctx, tx, func(tx *sql.Tx) error { return s.retryDeleteTx(ctx, tx, id) })
+	return db.retryDeleteTx(ctx, tx, id)
 }
 
-func (s *Store) retryDeleteTx(ctx context.Context, tx *sql.Tx, id string) error {
+func (db *DB) retryDeleteTx(ctx context.Context, tx *sql.Tx, id string) error {
 	return retry.DoTemporaryError(func(int) error {
-		err := s._deleteTx(ctx, tx, id)
+		err := db._deleteTx(ctx, tx, id)
 		sqlErr := sqlutil.MapError(err)
 		if sqlErr != nil && sqlErr.Code == "23503" {
 			// retry foreign key errors when deleting a user
@@ -316,9 +342,9 @@ func (s *Store) retryDeleteTx(ctx context.Context, tx *sql.Tx, id string) error 
 	)
 }
 
-func (s *Store) _deleteTx(ctx context.Context, tx *sql.Tx, id string) error {
+func (db *DB) _deleteTx(ctx context.Context, tx *sql.Tx, id string) error {
 	// cleanup rotations first
-	rows, err := tx.StmtContext(ctx, s.userRotations).QueryContext(ctx, id)
+	rows, err := tx.StmtContext(ctx, db.userRotations).QueryContext(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = nil
 	}
@@ -338,26 +364,26 @@ func (s *Store) _deleteTx(ctx context.Context, tx *sql.Tx, id string) error {
 	}
 
 	for _, rID := range rotationIDs {
-		err = s.removeUserFromRotation(ctx, tx, id, rID)
+		err = db.removeUserFromRotation(ctx, tx, id, rID)
 		if err != nil {
 			return fmt.Errorf("remove user '%s' from rotation '%s': %w", id, rID, err)
 		}
 	}
 
-	_, err = tx.StmtContext(ctx, s.deleteOne).ExecContext(ctx, id)
+	_, err = tx.StmtContext(ctx, db.deleteOne).ExecContext(ctx, id)
 	if err != nil {
 		return fmt.Errorf("delete user row: %w", err)
 	}
 	return nil
 }
 
-func (s *Store) removeUserFromRotation(ctx context.Context, tx *sql.Tx, userID, rotationID string) error {
+func (db *DB) removeUserFromRotation(ctx context.Context, tx *sql.Tx, userID, rotationID string) error {
 	type part struct {
 		ID     string
 		UserID string
 	}
 	var participants []part
-	rows, err := tx.StmtContext(ctx, s.rotationParts).QueryContext(ctx, rotationID)
+	rows, err := tx.StmtContext(ctx, db.rotationParts).QueryContext(ctx, rotationID)
 	if err != nil {
 		return fmt.Errorf("query participants: %w", err)
 	}
@@ -374,7 +400,7 @@ func (s *Store) removeUserFromRotation(ctx context.Context, tx *sql.Tx, userID, 
 	// update participant user IDs
 	var skipped bool
 	curIndex := -1
-	updatePart := tx.StmtContext(ctx, s.updateRotationPart)
+	updatePart := tx.StmtContext(ctx, db.updateRotationPart)
 	for _, p := range participants {
 		if p.UserID == userID {
 			skipped = true
@@ -390,7 +416,7 @@ func (s *Store) removeUserFromRotation(ctx context.Context, tx *sql.Tx, userID, 
 	}
 
 	// delete in reverse order from the end
-	deletePart := tx.StmtContext(ctx, s.deleteRotationPart)
+	deletePart := tx.StmtContext(ctx, db.deleteRotationPart)
 	for i := len(participants) - 1; i > curIndex; i-- {
 		_, err = deletePart.ExecContext(ctx, participants[i].ID)
 		if err != nil {
@@ -401,30 +427,54 @@ func (s *Store) removeUserFromRotation(ctx context.Context, tx *sql.Tx, userID, 
 	return nil
 }
 
-// Delete is equivalent to calling DeleteTx(ctx, nil, id).
-func (s *Store) Delete(ctx context.Context, id string) error { return s.DeleteTx(ctx, nil, id) }
-
-// Update id equivalent to calling UpdateTx(ctx, nil, u).
-func (s *Store) Update(ctx context.Context, u *User) error { return s.UpdateTx(ctx, nil, u) }
-
-// UpdateTx allows updating a user name, email, and status update preference.
-func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, u *User) error {
-	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin, permission.MatchUser(u.ID))
+// Delete implements the UserStore interface.
+func (db *DB) Delete(ctx context.Context, id string) error {
+	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
 	if err != nil {
 		return err
 	}
 
+	err = validate.UUID("UserID", id)
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	err = db.retryDeleteTx(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// Update implements the Store interface. Only admins can update user roles.
+func (db *DB) Update(ctx context.Context, u *User) error {
+	return db.UpdateTx(ctx, nil, u)
+}
+func (db *DB) UpdateTx(ctx context.Context, tx *sql.Tx, u *User) error {
 	n, err := u.Normalize()
 	if err != nil {
 		return err
 	}
 
-	_, err = withTx(ctx, tx, s.update).ExecContext(ctx, n.userUpdateFields()...)
+	err = permission.LimitCheckAny(ctx, permission.System, permission.Admin, permission.MatchUser(u.ID))
+	if err != nil {
+		return err
+	}
+	update := db.update
+	if tx != nil {
+		update = tx.StmtContext(ctx, update)
+	}
+	_, err = update.ExecContext(ctx, n.userUpdateFields()...)
 	return err
 }
 
-// SetUserRoleTx allows updating the role of the given user ID.
-func (s *Store) SetUserRoleTx(ctx context.Context, tx *sql.Tx, id string, role permission.Role) error {
+func (db *DB) SetUserRoleTx(ctx context.Context, tx *sql.Tx, id string, role permission.Role) error {
 	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
 	if err != nil {
 		return err
@@ -437,16 +487,15 @@ func (s *Store) SetUserRoleTx(ctx context.Context, tx *sql.Tx, id string, role p
 	if err != nil {
 		return err
 	}
-
-	_, err = withTx(ctx, tx, s.setUserRole).ExecContext(ctx, id, role)
+	s := db.setUserRole
+	if tx != nil {
+		s = tx.StmtContext(ctx, s)
+	}
+	_, err = s.ExecContext(ctx, id, role)
 	return err
 }
 
-// FindMany will return all users matching the provided IDs.
-//
-// There is no guarantee the returned users will be in the same order or
-// that the number of returned users matches the number of provided IDs.
-func (s *Store) FindMany(ctx context.Context, ids []string) ([]User, error) {
+func (db *DB) FindMany(ctx context.Context, ids []string) ([]User, error) {
 	err := permission.LimitCheckAny(ctx, permission.All)
 	if err != nil {
 		return nil, err
@@ -457,13 +506,9 @@ func (s *Store) FindMany(ctx context.Context, ids []string) ([]User, error) {
 		return nil, err
 	}
 
-<<<<<<< HEAD
 	userID := permission.UserID(ctx)
 
 	rows, err := db.findMany.QueryContext(ctx, sqlutil.UUIDArray(ids), userID)
-=======
-	rows, err := s.findMany.QueryContext(ctx, sqlutil.UUIDArray(ids))
->>>>>>> 6390c34249fca92067dedbf013eb7c6fb99562f1
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -485,29 +530,30 @@ func (s *Store) FindMany(ctx context.Context, ids []string) ([]User, error) {
 	return result, nil
 }
 
-// FindOne is equivalent to calling FindOneTx(ctx, nil, id, false).
-func (s *Store) FindOne(ctx context.Context, id string) (*User, error) {
-	return s.FindOneTx(ctx, nil, id, false)
+// FindOne implements the Store interface.
+func (db *DB) FindOne(ctx context.Context, id string) (*User, error) {
+	return db.FindOneTx(ctx, nil, id, false)
 }
-
-// FindOneTx will return a single user, locking the row if forUpdate is set.
-func (s *Store) FindOneTx(ctx context.Context, tx *sql.Tx, id string, forUpdate bool) (*User, error) {
-	err := permission.LimitCheckAny(ctx, permission.All)
+func (db *DB) FindOneTx(ctx context.Context, tx *sql.Tx, id string, forUpdate bool) (*User, error) {
+	err := validate.UUID("UserID", id)
 	if err != nil {
 		return nil, err
 	}
 
-	err = validate.UUID("UserID", id)
+	err = permission.LimitCheckAny(ctx, permission.All)
 	if err != nil {
 		return nil, err
 	}
 
-	stmt := s.findOne
-	if forUpdate {
-		stmt = s.findOneForUpdate
-	}
-	row := withTx(ctx, tx, stmt).QueryRowContext(ctx, id)
 	var u User
+	findOne := db.findOne
+	if forUpdate {
+		findOne = db.findOneForUpdate
+	}
+	if tx != nil {
+		findOne = tx.StmtContext(ctx, findOne)
+	}
+	row := findOne.QueryRowContext(ctx, id)
 	err = u.scanFrom(row.Scan)
 	if err != nil {
 		return nil, err
@@ -515,10 +561,8 @@ func (s *Store) FindOneTx(ctx context.Context, tx *sql.Tx, id string, forUpdate 
 	return &u, nil
 }
 
-// FindSomeAuthSubjectsForProvider returns up to `limit` auth subjects associated with a given providerID.
-//
-// afterSubjectID can be specified for paginating responses. Results are sorted by subject id.
-func (s *Store) FindSomeAuthSubjectsForProvider(ctx context.Context, limit int, afterSubjectID, providerID string) ([]AuthSubject, error) {
+// FindSomeAuthSubjectsForProvider implements the Store interface. It finds all auth subjects associated with a given userID.
+func (db *DB) FindSomeAuthSubjectsForProvider(ctx context.Context, limit int, afterSubjectID, providerID string) ([]AuthSubject, error) {
 	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
 	if err != nil {
 		return nil, err
@@ -547,7 +591,7 @@ func (s *Store) FindSomeAuthSubjectsForProvider(ctx context.Context, limit int, 
 		LIMIT %d
 	`, limit)
 
-	rows, err := s.db.QueryContext(ctx, q, providerID, afterSubjectID)
+	rows, err := db.db.QueryContext(ctx, q, providerID, afterSubjectID)
 	if err != nil {
 		return nil, err
 	}
@@ -567,27 +611,44 @@ func (s *Store) FindSomeAuthSubjectsForProvider(ctx context.Context, limit int, 
 	return authSubjects, nil
 }
 
-// FindAllAuthSubjectsForUser returns all auth subjects associated with a given userID.
-func (s *Store) FindAllAuthSubjectsForUser(ctx context.Context, userID string) ([]AuthSubject, error) {
-	var result []AuthSubject
-	err := s.AuthSubjectsFunc(ctx, "", userID, func(sub AuthSubject) error {
-		result = append(result, sub)
-		return nil
-	})
+// FindAllAuthSubjectsForUser implements the Store interface. It finds all auth subjects associated with a given userID.
+func (db *DB) FindAllAuthSubjectsForUser(ctx context.Context, userID string) ([]AuthSubject, error) {
+	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
 	if err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	err = validate.UUID("UserID", userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var authSubjects []AuthSubject
+	rows, err := db.findAuthSubjectsByUser.QueryContext(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var a AuthSubject
+		a.UserID = userID
+		err = rows.Scan(&a.ProviderID, &a.SubjectID)
+		if err != nil {
+			return nil, err
+		}
+		authSubjects = append(authSubjects, a)
+	}
+
+	return authSubjects, nil
 }
 
-// FindAll returns all users.
-func (s *Store) FindAll(ctx context.Context) ([]User, error) {
+// FindAll implements the Store interface.
+func (db *DB) FindAll(ctx context.Context) ([]User, error) {
 	err := permission.LimitCheckAny(ctx, permission.All)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.findAll.QueryContext(ctx)
+	rows, err := db.findAll.QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -606,8 +667,8 @@ func (s *Store) FindAll(ctx context.Context) ([]User, error) {
 	return users, nil
 }
 
-// AddAuthSubjectTx adds an auth subject for a user.
-func (s *Store) AddAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubject) error {
+// AddAuthSubjectTx implements the Store interface. It is used to add an auth subject to a given user.
+func (db *DB) AddAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubject) error {
 	var userID string
 	if a != nil {
 		userID = a.UserID
@@ -622,14 +683,16 @@ func (s *Store) AddAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubject
 		return err
 	}
 
-	_, err = withTx(ctx, tx, s.insertUserAuthSubject).ExecContext(ctx, a.UserID, n.ProviderID, n.SubjectID)
+	s := db.insertUserAuthSubject
+	if tx != nil {
+		s = tx.Stmt(s)
+	}
+	_, err = s.ExecContext(ctx, a.UserID, n.ProviderID, n.SubjectID)
 	return err
 }
 
-// DeleteAuthSubjectTx removes an auth subject for a user.
-//
-// If the subject does not exist, nil is returned.
-func (s *Store) DeleteAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubject) error {
+// DeleteAuthSubjectTx implements the Store interface. It is used to remove an auth subject for a given user.
+func (db *DB) DeleteAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubject) error {
 	err := permission.LimitCheckAny(ctx, permission.System, permission.Admin)
 	if err != nil {
 		return err
@@ -640,7 +703,11 @@ func (s *Store) DeleteAuthSubjectTx(ctx context.Context, tx *sql.Tx, a *AuthSubj
 		return err
 	}
 
-	_, err = withTx(ctx, tx, s.deleteUserAuthSubject).ExecContext(ctx, a.UserID, n.ProviderID, n.SubjectID)
+	s := db.deleteUserAuthSubject
+	if tx != nil {
+		s = tx.Stmt(s)
+	}
+	_, err = s.ExecContext(ctx, a.UserID, n.ProviderID, n.SubjectID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		// do not return error if auth subject doesn't exist
 		return err

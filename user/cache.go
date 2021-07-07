@@ -42,35 +42,35 @@ func (c checker) UserExistsString(idStr string) bool {
 func (c checker) UserExistsUUID(id uuid.UUID) bool { _, ok := c[id]; return ok }
 
 // UserExists returns an ExistanceChecker.
-func (s *Store) UserExists(ctx context.Context) (ExistanceChecker, error) {
+func (db *DB) UserExists(ctx context.Context) (ExistanceChecker, error) {
 	err := permission.LimitCheckAny(ctx)
 	if err != nil {
 		return nil, err
 	}
-	m, err := s.userExistMap(ctx)
+	m, err := db.userExistMap(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return checker(m), nil
 }
 
-func (s *Store) userExistMap(ctx context.Context) (map[uuid.UUID]struct{}, error) {
+func (db *DB) userExistMap(ctx context.Context) (map[uuid.UUID]struct{}, error) {
 	var data []byte
-	err := s.grp.Get(ctx, timeKey("userIDs", time.Minute), groupcache.AllocatingByteSliceSink(&data))
+	err := db.grp.Get(ctx, timeKey("userIDs", time.Minute), groupcache.AllocatingByteSliceSink(&data))
 	if err != nil {
 		return nil, err
 	}
 
-	m := <-s.userExist
-	if bytes.Equal(data[:sha256.Size], s.userExistHash) {
-		s.userExist <- m
+	m := <-db.userExist
+	if bytes.Equal(data[:sha256.Size], db.userExistHash) {
+		db.userExist <- m
 		return m, nil
 	}
 
 	ids := make([]uuid.UUID, (len(data)-sha256.Size)/16)
 	err = binary.Read(bytes.NewReader(data[sha256.Size:]), binary.BigEndian, &ids)
 	if err != nil {
-		s.userExist <- m
+		db.userExist <- m
 		return nil, err
 	}
 
@@ -78,14 +78,14 @@ func (s *Store) userExistMap(ctx context.Context) (map[uuid.UUID]struct{}, error
 	for _, id := range ids {
 		m[id] = struct{}{}
 	}
-	s.userExistHash = data[:sha256.Size]
-	s.userExist <- m
+	db.userExistHash = data[:sha256.Size]
+	db.userExist <- m
 
 	return m, nil
 }
 
-func (s *Store) currentUserIDs(ctx context.Context) (result []byte, err error) {
-	rows, err := s.ids.QueryContext(ctx)
+func (db *DB) currentUserIDs(ctx context.Context) (result []byte, err error) {
+	rows, err := db.ids.QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -113,10 +113,10 @@ func (s *Store) currentUserIDs(ctx context.Context) (result []byte, err error) {
 	return buf.Bytes(), nil
 }
 
-func (s *Store) cacheGet(ctx context.Context, key string, dest groupcache.Sink) error {
+func (db *DB) cacheGet(ctx context.Context, key string, dest groupcache.Sink) error {
 	switch keyName(key) {
 	case "userIDs":
-		data, err := s.currentUserIDs(ctx)
+		data, err := db.currentUserIDs(ctx)
 		if err != nil {
 			return err
 		}

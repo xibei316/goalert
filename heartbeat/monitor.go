@@ -42,22 +42,17 @@ func (m Monitor) Normalize() (*Monitor, error) {
 }
 
 func (m *Monitor) scanFrom(scanFn func(...interface{}) error) error {
-	var (
-		t       sqlutil.NullTime
-		timeout pgtype.Interval
-	)
+	var t sqlutil.NullTime
 
+	var timeout pgtype.Interval
 	err := scanFn(&m.ID, &m.Name, &m.ServiceID, &timeout, &m.lastState, &t)
 	if err != nil {
 		return err
 	}
-
 	err = timeout.AssignTo(&m.Timeout)
 	if err != nil {
 		return err
 	}
-
 	m.lastHeartbeat = t.Time
-
 	return nil
 }
