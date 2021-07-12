@@ -2,17 +2,16 @@ package dataloader
 
 import (
 	"context"
-	"time"
-
 	"github.com/target/goalert/user"
+	"time"
 )
 
 type UserLoader struct {
 	*loader
-	store *user.Store
+	store user.Store
 }
 
-func NewUserLoader(ctx context.Context, store *user.Store) *UserLoader {
+func NewUserLoader(ctx context.Context, store user.Store) *UserLoader {
 	p := &UserLoader{
 		store: store,
 	}

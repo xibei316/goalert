@@ -141,8 +141,7 @@ func (opts renderData) QueryArgs() []sql.NamedArg {
 	}
 }
 
-// Search performs a paginated search of users with the given options.
-func (s *Store) Search(ctx context.Context, opts *SearchOptions) ([]User, error) {
+func (db *DB) Search(ctx context.Context, opts *SearchOptions) ([]User, error) {
 	err := permission.LimitCheckAny(ctx, permission.User)
 	if err != nil {
 		return nil, err
@@ -167,7 +166,7 @@ func (s *Store) Search(ctx context.Context, opts *SearchOptions) ([]User, error)
 		return nil, err
 	}
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := db.db.QueryContext(ctx, query, args...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

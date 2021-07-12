@@ -13,7 +13,14 @@ import (
 )
 
 // Store allows generating and consuming nonce values.
-type Store struct {
+type Store interface {
+	New() [16]byte
+	Consume(context.Context, [16]byte) (bool, error)
+	Shutdown(context.Context) error
+}
+
+// DB implements the Store interface using postgres as it's backend.
+type DB struct {
 	db       *sql.DB
 	shutdown chan context.Context
 
@@ -21,11 +28,11 @@ type Store struct {
 	cleanup *sql.Stmt
 }
 
-// NewStore prepares a new Store.
-func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
+// NewDB prepares a new DB instance for the given sql.DB.
+func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 	p := &util.Prepare{DB: db, Ctx: ctx}
 
-	d := &Store{
+	d := &DB{
 		db:       db,
 		shutdown: make(chan context.Context),
 
@@ -47,37 +54,37 @@ func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
 	return d, nil
 }
 
-func (s *Store) loop() {
-	defer close(s.shutdown)
+func (db *DB) loop() {
+	defer close(db.shutdown)
 	t := time.NewTicker(time.Hour * 24)
 	defer t.Stop()
 	for {
 		select {
 		case <-t.C:
-			_, err := s.cleanup.ExecContext(context.Background())
+			_, err := db.cleanup.ExecContext(context.Background())
 			if err != nil {
 				log.Log(context.Background(), errors.Wrap(err, "cleanup old nonce values"))
 			}
-		case <-s.shutdown:
+		case <-db.shutdown:
 			return
 		}
 	}
 }
 
 // Shutdown allows gracefully shutting down the nonce store.
-func (s *Store) Shutdown(ctx context.Context) error {
-	if s == nil {
+func (db *DB) Shutdown(ctx context.Context) error {
+	if db == nil {
 		return nil
 	}
-	s.shutdown <- ctx
+	db.shutdown <- ctx
 
 	// wait for it to complete
-	<-s.shutdown
+	<-db.shutdown
 	return nil
 }
 
 // New will generate a new cryptographically random nonce value.
-func (s *Store) New() [16]byte { return uuid.New() }
+func (db *DB) New() [16]byte { return uuid.New() }
 
 // Consume will record the use of a nonce value.
 //
@@ -86,8 +93,8 @@ func (s *Store) New() [16]byte { return uuid.New() }
 //
 // The first call to Consume for a given ID will return true, subsequent calls
 // for the same ID will return false.
-func (s *Store) Consume(ctx context.Context, id [16]byte) (bool, error) {
-	res, err := s.consume.ExecContext(ctx, uuid.UUID(id).String())
+func (db *DB) Consume(ctx context.Context, id [16]byte) (bool, error) {
+	res, err := db.consume.ExecContext(ctx, uuid.UUID(id).String())
 	if err != nil {
 		return false, err
 	}

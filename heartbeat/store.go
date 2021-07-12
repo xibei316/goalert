@@ -14,7 +14,33 @@ import (
 )
 
 // Store manages heartbeat checks and recording heartbeats.
-type Store struct {
+type Store interface {
+	// Heartbeat records a heartbeat for the given heartbeat ID.
+	Heartbeat(context.Context, string) error
+
+	// CreateTx creates a new heartbeat check within the transaction.
+	CreateTx(context.Context, *sql.Tx, *Monitor) (*Monitor, error)
+
+	// Delete deletes the heartbeat check with the given heartbeat ID.
+	DeleteTx(context.Context, *sql.Tx, ...string) error
+
+	// FindAllByService returns all heartbeats belonging to the given service ID.
+	FindAllByService(context.Context, string) ([]Monitor, error)
+
+	// UpdateTx updates a heartbeat's fields within the transaction.
+	UpdateTx(context.Context, *sql.Tx, *Monitor) error
+
+	// FindOneTx returns a heartbeat montior for updating.
+	FindOneTx(context.Context, *sql.Tx, string) (*Monitor, error)
+
+	// FindMany returns the heartbeat monitors with the given IDs.
+	FindMany(context.Context, ...string) ([]Monitor, error)
+}
+
+var _ Store = &DB{}
+
+// DB implements Store using Postgres as a backend.
+type DB struct {
 	db *sql.DB
 
 	create     *sql.Stmt
@@ -27,11 +53,9 @@ type Store struct {
 	heartbeat  *sql.Stmt
 }
 
-// NewStore creates a new Store and prepares all sql statements.
-func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
+func NewDB(ctx context.Context, db *sql.DB) (*DB, error) {
 	p := &util.Prepare{DB: db, Ctx: ctx}
-
-	return &Store{
+	return &DB{
 		db: db,
 
 		create: p.P(`
@@ -79,103 +103,79 @@ func NewStore(ctx context.Context, db *sql.DB) (*Store, error) {
 	}, p.Err
 }
 
-// CreateTx creates a new heartbeat Monitor.
-func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, m *Monitor) (*Monitor, error) {
+func (db *DB) CreateTx(ctx context.Context, tx *sql.Tx, m *Monitor) (*Monitor, error) {
 	err := permission.LimitCheckAny(ctx, permission.User, permission.Admin)
 	if err != nil {
 		return nil, err
 	}
-
 	n, err := m.Normalize()
 	if err != nil {
 		return nil, err
 	}
-
-	var timeout pgtype.Interval
-	if err = timeout.Set(n.Timeout); err != nil {
-		return nil, err
-	}
-
 	n.ID = uuid.New().String()
 	n.lastState = StateInactive
-	_, err = tx.StmtContext(ctx, s.create).ExecContext(ctx, n.ID, n.Name, n.ServiceID, &timeout)
+	var timeout pgtype.Interval
+	err = timeout.Set(n.Timeout)
 	if err != nil {
 		return nil, err
 	}
-
-	return n, nil
+	_, err = tx.StmtContext(ctx, db.create).ExecContext(ctx, n.ID, n.Name, n.ServiceID, &timeout)
+	return n, err
 }
-
-// RecordHeartbeat records a heartbeat for the given heartbeat ID.
-func (s *Store) RecordHeartbeat(ctx context.Context, id string) error {
+func (db *DB) Heartbeat(ctx context.Context, id string) error {
 	err := validate.UUID("MonitorID", id)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.heartbeat.ExecContext(ctx, id)
-
+	_, err = db.heartbeat.ExecContext(ctx, id)
 	return err
 }
-
-// DeleteTx deletes the heartbeat check with the given ID(s).
-func (s *Store) DeleteTx(ctx context.Context, tx *sql.Tx, ids ...string) error {
+func (db *DB) DeleteTx(ctx context.Context, tx *sql.Tx, ids ...string) error {
 	err := permission.LimitCheckAny(ctx, permission.User, permission.Admin)
 	if err != nil {
 		return err
 	}
-
 	err = validate.ManyUUID("MonitorID", ids, 100)
 	if err != nil {
 		return err
 	}
-
-	stmt := s.delete
+	s := db.delete
 	if tx != nil {
-		stmt = tx.StmtContext(ctx, stmt)
+		s = tx.StmtContext(ctx, s)
 	}
-
-	_, err = stmt.ExecContext(ctx, sqlutil.UUIDArray(ids))
-
+	_, err = s.ExecContext(ctx, sqlutil.UUIDArray(ids))
 	return err
 }
-
-// UpdateTx updates a heartbeat Monitor.
-func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, m *Monitor) error {
+func (db *DB) UpdateTx(ctx context.Context, tx *sql.Tx, m *Monitor) error {
 	err := permission.LimitCheckAny(ctx, permission.User, permission.Admin)
 	if err != nil {
 		return err
 	}
-
 	n, err := m.Normalize()
 	if err != nil {
 		return err
 	}
-
 	err = validate.Many(err,
 		validate.UUID("MonitorID", n.ID),
 	)
 	if err != nil {
 		return err
 	}
-
-	stmt := s.update
+	stmt := db.update
 	if tx != nil {
 		stmt = tx.StmtContext(ctx, stmt)
 	}
-
 	var timeout pgtype.Interval
-	if err = timeout.Set(n.Timeout); err != nil {
+	err = timeout.Set(n.Timeout)
+	if err != nil {
 		return err
 	}
-
 	_, err = stmt.ExecContext(ctx, n.ID, n.Name, &timeout)
-
 	return err
 }
 
-// FindOneTx returns a heartbeat montior for updating.
-func (s *Store) FindOneTx(ctx context.Context, tx *sql.Tx, id string) (*Monitor, error) {
+func (db *DB) FindOneTx(ctx context.Context, tx *sql.Tx, id string) (*Monitor, error) {
 	err := permission.LimitCheckAny(ctx, permission.User, permission.Admin)
 	if err != nil {
 		return nil, err
@@ -185,26 +185,21 @@ func (s *Store) FindOneTx(ctx context.Context, tx *sql.Tx, id string) (*Monitor,
 	if err != nil {
 		return nil, err
 	}
-
-	row := tx.StmtContext(ctx, s.findOneUpd).QueryRowContext(ctx, id)
-
+	row := tx.StmtContext(ctx, db.findOneUpd).QueryRowContext(ctx, id)
 	var m Monitor
-	if err = m.scanFrom(row.Scan); err != nil {
+	err = m.scanFrom(row.Scan)
+	if err != nil {
 		return nil, err
 	}
 
 	return &m, nil
 }
 
-// FindMany returns the heartbeat monitors with the given IDs.
-//
-// The order and number of returned monitors is not guaranteed.
-func (s *Store) FindMany(ctx context.Context, ids ...string) ([]Monitor, error) {
+func (db *DB) FindMany(ctx context.Context, ids ...string) ([]Monitor, error) {
 	err := permission.LimitCheckAny(ctx, permission.User, permission.Admin)
 	if err != nil {
 		return nil, err
 	}
-
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -213,59 +208,47 @@ func (s *Store) FindMany(ctx context.Context, ids ...string) ([]Monitor, error) 
 	if err != nil {
 		return nil, err
 	}
-
-	rows, err := s.findMany.QueryContext(ctx, sqlutil.UUIDArray(ids))
+	rows, err := db.findMany.QueryContext(ctx, sqlutil.UUIDArray(ids))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var (
-		monitors []Monitor
-		m        Monitor
-	)
-
+	var monitors []Monitor
+	var m Monitor
 	for rows.Next() {
 		err = m.scanFrom(rows.Scan)
 		if err != nil {
 			return nil, err
 		}
-
 		monitors = append(monitors, m)
 	}
 
 	return monitors, nil
 }
 
-// FindAllByService returns all heartbeats belonging to the given service ID.
-func (s *Store) FindAllByService(ctx context.Context, serviceID string) ([]Monitor, error) {
+func (db *DB) FindAllByService(ctx context.Context, serviceID string) ([]Monitor, error) {
 	err := permission.LimitCheckAny(ctx, permission.User, permission.Admin)
 	if err != nil {
 		return nil, err
 	}
-
 	err = validate.UUID("ServiceID", serviceID)
 	if err != nil {
 		return nil, err
 	}
-
-	rows, err := s.findAll.QueryContext(ctx, serviceID)
+	rows, err := db.findAll.QueryContext(ctx, serviceID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var (
-		monitors []Monitor
-		m        Monitor
-	)
-
+	var monitors []Monitor
+	var m Monitor
 	for rows.Next() {
 		err = m.scanFrom(rows.Scan)
 		if err != nil {
 			return nil, err
 		}
-
 		monitors = append(monitors, m)
 	}
 
