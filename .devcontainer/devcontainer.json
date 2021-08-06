@@ -1,0 +1,53 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.187.0/containers/go
+{
+  "name": "GoAlert",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
+
+  // Set *default* container specific settings.json values on container create.
+  "settings": {
+    "go.toolsManagement.checkForUpdates": "local",
+    "go.useLanguageServer": true,
+    "go.gopath": "/go",
+    "go.goroot": "/usr/local/go",
+    "go.testTimeout": "2m",
+    "editor.formatOnSave": true
+  },
+
+  // Add the IDs of extensions you want installed when the container is created.
+  "extensions": [
+    "golang.Go",
+    "kumar-harsh.graphql-for-vscode",
+    "esbenp.prettier-vscode",
+    "zxh404.vscode-proto3",
+    "redhat.vscode-yaml",
+    "joaompinto.vscode-graphviz",
+    "ms-azuretools.vscode-docker"
+  ],
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  "forwardPorts": [3030],
+
+  "portsAttributes": {
+    "3030": {
+      "onAutoForward": "openBrowserOnce",
+      "label": "GoAlert",
+      "requireLocalPort": true
+    },
+    "5432": { "onAutoForward": "silent", "label": "PostgreSQL" },
+    "3035": { "onAutoForward": "silent", "label": "Webpack" },
+    "2112": { "onAutoForward": "silent", "label": "GoAlert Prometheus" },
+    "1234": { "onAutoForward": "silent", "label": "GoAlert SysAPI" },
+    "8025": { "onAutoForward": "silent", "label": "MailHog UI" },
+    "1025": { "onAutoForward": "silent", "label": "MailHog SMTP" },
+    "9090": { "onAutoForward": "silent", "label": "Prometheus" }
+  },
+
+  // Use 'postCreateCommand' to run commands after the container is created.
+  "postCreateCommand": "sudo start_postgres && psql -c 'create user goalert with superuser login;' && psql -c 'create database goalert;' && make regendb && sudo su postgres -c 'pg_ctl stop'",
+  "postStartCommand": "sudo start_postgres",
+  "remoteUser": "dev"
+}
