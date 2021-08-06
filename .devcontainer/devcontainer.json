@@ -28,9 +28,6 @@
     "ms-azuretools.vscode-docker"
   ],
 
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  "forwardPorts": [3030],
-
   "portsAttributes": {
     "3030": {
       "onAutoForward": "openBrowserOnce",
