@@ -17,6 +17,7 @@ import TempSchedDialog from './temp-sched/TempSchedDialog'
 import TempSchedDeleteConfirmation from './temp-sched/TempSchedDeleteConfirmation'
 import { ScheduleAvatar } from '../util/avatars'
 import { useConfigValue } from '../util/RequireConfig'
+import ScheduleOverrideCreateDialog from './ScheduleOverrideCreateDialog'
 
 const query = gql`
   fragment ScheduleTitleQuery on Schedule {
@@ -32,11 +33,21 @@ const query = gql`
   }
 `
 
+export const ScheduleCalendarContext = React.createContext({
+  onNewTempSched: () => {},
+  onEditTempSched: () => {},
+  onDeleteTempSched: () => {},
+  // ts files infer function signature, need parameter list
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setOverrideDialog: (overrideVal) => {},
+})
+
 export default function ScheduleDetails({ scheduleID }) {
   const [showEdit, setShowEdit] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [configTempSchedule, setConfigTempSchedule] = useState(null)
   const [deleteTempSchedule, setDeleteTempSchedule] = useState(null)
+  const [overrideDialog, setOverrideDialog] = useState(null)
 
   const [slackEnabled] = useConfigValue('Slack.Enable')
 
@@ -90,18 +101,31 @@ export default function ScheduleDetails({ scheduleID }) {
           scheduleID={scheduleID}
         />
       )}
+      {Boolean(overrideDialog) && (
+        <ScheduleOverrideCreateDialog
+          defaultValue={overrideDialog.defaultValue}
+          variant={overrideDialog.variant}
+          scheduleID={scheduleID}
+          onClose={() => setOverrideDialog(null)}
+          removeUserReadOnly
+        />
+      )}
       <DetailsPage
         avatar={<ScheduleAvatar />}
         title={data.name}
         subheader={`Time Zone: ${data.timeZone || 'Loading...'}`}
         details={data.description}
         pageContent={
-          <ScheduleCalendarQuery
-            scheduleID={scheduleID}
-            onNewTempSched={onNewTempSched}
-            onEditTempSched={onEditTempSched}
-            onDeleteTempSched={onDeleteTempSched}
-          />
+          <ScheduleCalendarContext.Provider
+            value={{
+              onNewTempSched,
+              onEditTempSched,
+              onDeleteTempSched,
+              setOverrideDialog,
+            }}
+          >
+            <ScheduleCalendarQuery scheduleID={scheduleID} />
+          </ScheduleCalendarContext.Provider>
         }
         primaryActions={[
           <CalendarSubscribeButton

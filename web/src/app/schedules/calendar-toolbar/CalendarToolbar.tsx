@@ -8,8 +8,8 @@ import {
   Typography,
 } from '@material-ui/core'
 import { DateTime } from 'luxon'
-import { getEndOfWeek, getStartOfWeek } from '../util/luxon-helpers'
-import { useCalendarNavigation } from './hooks'
+import { getEndOfWeek, getStartOfWeek } from '../../util/luxon-helpers'
+import { useCalendarNavigation } from '../hooks'
 import LeftIcon from '@material-ui/icons/ChevronLeft'
 import RightIcon from '@material-ui/icons/ChevronRight'
 
@@ -20,6 +20,12 @@ const useStyles = makeStyles((theme) => ({
   },
   container: {
     paddingBottom: theme.spacing(2),
+  },
+  filterBtn: {
+    marginRight: theme.spacing(1.75),
+  },
+  endAdornment: {
+    marginLeft: theme.spacing(1.75),
   },
 }))
 
@@ -158,7 +164,9 @@ function CalendarToolbar(props: CalendarToolbarProps): JSX.Element {
 
       <Grid item>
         <Grid container alignItems='center' justifyContent='flex-end'>
-          {props.filter}
+          {props.filter && (
+            <div className={classes.filterBtn}>{props.filter}</div>
+          )}
           <ButtonGroup
             color='primary'
             aria-label='Toggle between Monthly and Weekly views'
@@ -180,7 +188,9 @@ function CalendarToolbar(props: CalendarToolbarProps): JSX.Element {
               Week
             </Button>
           </ButtonGroup>
-          {props.endAdornment}
+          {props.endAdornment && (
+            <div className={classes.endAdornment}>{props.endAdornment}</div>
+          )}
         </Grid>
       </Grid>
     </Grid>

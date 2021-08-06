@@ -1,28 +1,20 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { PropTypes as p } from 'prop-types'
-import { Card, Button, makeStyles } from '@material-ui/core'
-import Grid from '@material-ui/core/Grid'
-import FormControlLabel from '@material-ui/core/FormControlLabel'
-import Switch from '@material-ui/core/Switch'
+import { Card, makeStyles } from '@material-ui/core'
 import Typography from '@material-ui/core/Typography'
 import { Calendar } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
-import CalendarEventWrapper, {
-  EventHandlerContext,
-} from './CalendarEventWrapper'
-import CalendarToolbar from './CalendarToolbar'
-import ScheduleOverrideCreateDialog from './ScheduleOverrideCreateDialog'
-import { useResetURLParams, useURLParam } from '../actions'
+import CalendarEventWrapper from './CalendarEventWrapper'
+import CalendarToolbar from './calendar-toolbar/CalendarToolbar'
 import { DateTime, Interval } from 'luxon'
 import { theme } from '../mui'
 import LuxonLocalizer from '../util/LuxonLocalizer'
 import { parseInterval, trimSpans } from '../util/shifts'
 import _ from 'lodash'
-import GroupAdd from '@material-ui/icons/GroupAdd'
-import FilterContainer from '../util/FilterContainer'
-import { UserSelect } from '../selection'
+import CalendarUserFilter from './calendar-toolbar/CalendarUserFilter'
+import CalendarActionsSelect from './calendar-toolbar/CalendarActionsSelect'
 import SpinContainer from '../loading/components/SpinContainer'
-import { useCalendarNavigation } from './hooks'
+import { useCalendarNavigation, useCalendarUserFilter } from './hooks'
 
 const localizer = LuxonLocalizer(DateTime, { firstDayOfWeek: 0 })
 
@@ -30,30 +22,14 @@ const useStyles = makeStyles((theme) => ({
   card: {
     padding: theme.spacing(2),
   },
-  filterBtn: {
-    marginRight: theme.spacing(1.75),
-  },
-  tempSchedBtn: {
-    marginLeft: theme.spacing(1.75),
-  },
 }))
 
 function ScheduleCalendar(props) {
+  const { shifts, temporarySchedules } = props
+
   const classes = useStyles()
   const { weekly, start } = useCalendarNavigation()
-
-  const [overrideDialog, setOverrideDialog] = useState(null)
-  const [activeOnly, setActiveOnly] = useURLParam('activeOnly', false)
-  const [userFilter, setUserFilter] = useURLParam('userFilter', [])
-  const resetFilter = useResetURLParams('userFilter', 'activeOnly')
-
-  const {
-    shifts,
-    temporarySchedules,
-    onNewTempSched,
-    onEditTempSched,
-    onDeleteTempSched,
-  } = props
+  const { userFilter, activeOnly } = useCalendarUserFilter()
 
   const eventStyleGetter = (event, start, end, isSelected) => {
     if (event.fixed) {
@@ -136,97 +112,38 @@ function ScheduleCalendar(props) {
       </Typography>
       <Card className={classes.card} data-cy='calendar'>
         <CalendarToolbar
-          filter={
-            <FilterContainer
-              onReset={resetFilter}
-              iconButtonProps={{
-                size: 'small',
-                className: classes.filterBtn,
-              }}
-            >
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={activeOnly}
-                      onChange={(e) => setActiveOnly(e.target.checked)}
-                      value='activeOnly'
-                    />
-                  }
-                  label='Active shifts only'
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <UserSelect
-                  label='Filter users...'
-                  multiple
-                  value={userFilter}
-                  onChange={setUserFilter}
-                />
-              </Grid>
-            </FilterContainer>
-          }
-          endAdornment={
-            <Button
-              variant='contained'
-              color='primary'
-              data-cy='new-temp-sched'
-              onClick={onNewTempSched}
-              className={classes.tempSchedBtn}
-              startIcon={<GroupAdd />}
-              title='Make temporary change to schedule'
-            >
-              Temp Sched
-            </Button>
-          }
+          filter={<CalendarUserFilter />}
+          endAdornment={<CalendarActionsSelect />}
         />
         <SpinContainer loading={props.loading}>
-          <EventHandlerContext.Provider
-            value={{
-              onEditTempSched,
-              onDeleteTempSched,
-              onOverrideClick: setOverrideDialog,
+          <Calendar
+            date={DateTime.fromISO(start).toJSDate()}
+            localizer={localizer}
+            events={getCalEvents(shifts, temporarySchedules)}
+            style={{
+              height: weekly ? '100%' : '45rem',
+              fontFamily: theme.typography.body2.fontFamily,
+              fontSize: theme.typography.body2.fontSize,
             }}
-          >
-            <Calendar
-              date={DateTime.fromISO(start).toJSDate()}
-              localizer={localizer}
-              events={getCalEvents(shifts, temporarySchedules)}
-              style={{
-                height: weekly ? '100%' : '45rem',
-                fontFamily: theme.typography.body2.fontFamily,
-                fontSize: theme.typography.body2.fontSize,
-              }}
-              tooltipAccessor={() => null}
-              views={['month', 'week']}
-              view={weekly ? 'week' : 'month'}
-              showAllEvents
-              eventPropGetter={eventStyleGetter}
-              onNavigate={() => {}} // stub to hide false console err
-              onView={() => {}} // stub to hide false console err
-              components={{
-                eventWrapper: CalendarEventWrapper,
-                toolbar: () => null,
-              }}
-            />
-          </EventHandlerContext.Provider>
+            tooltipAccessor={() => null}
+            views={['month', 'week']}
+            view={weekly ? 'week' : 'month'}
+            showAllEvents
+            eventPropGetter={eventStyleGetter}
+            onNavigate={() => {}} // stub to hide false console err
+            onView={() => {}} // stub to hide false console err
+            components={{
+              eventWrapper: CalendarEventWrapper,
+              toolbar: () => null,
+            }}
+          />
         </SpinContainer>
       </Card>
-      {Boolean(overrideDialog) && (
-        <ScheduleOverrideCreateDialog
-          defaultValue={overrideDialog.defaultValue}
-          variant={overrideDialog.variant}
-          scheduleID={props.scheduleID}
-          onClose={() => setOverrideDialog(null)}
-          removeUserReadOnly
-        />
-      )}
     </React.Fragment>
   )
 }
 
 ScheduleCalendar.propTypes = {
-  scheduleID: p.string.isRequired,
   shifts: p.array.isRequired,
   temporarySchedules: p.array,
   loading: p.bool,

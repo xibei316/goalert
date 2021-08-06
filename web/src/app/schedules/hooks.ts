@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon'
-import { useURLParam } from '../actions'
+import { useResetURLParams, useURLParam } from '../actions'
 import { getStartOfWeek } from '../util/luxon-helpers'
 
 interface CalendarNavigation {
@@ -23,5 +23,27 @@ export function useCalendarNavigation(): CalendarNavigation {
     setWeekly,
     start,
     setStart,
+  }
+}
+
+interface CalendarUserFilter {
+  activeOnly: boolean
+  setActiveOnly: (newValue: boolean) => void
+  userFilter: string[]
+  setUserFilter: (newValue: string[]) => void
+  resetUserFilter: () => void
+}
+
+export function useCalendarUserFilter(): CalendarUserFilter {
+  const [activeOnly, setActiveOnly] = useURLParam<boolean>('activeOnly', false)
+  const [userFilter, setUserFilter] = useURLParam<string[]>('userFilter', [])
+  const resetUserFilter = useResetURLParams('userFilter', 'activeOnly')
+
+  return {
+    activeOnly,
+    setActiveOnly,
+    userFilter,
+    setUserFilter,
+    resetUserFilter,
   }
 }
