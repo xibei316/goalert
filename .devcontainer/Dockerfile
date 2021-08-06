@@ -1,4 +1,4 @@
-FROM goalert/build-env:go1.16.6-postgres13
+FROM goalert/build-env:go1.16.7-postgres13
 
 RUN apk -u add fish sudo
 
