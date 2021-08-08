@@ -71,20 +71,15 @@ export default function TempSchedShiftsList({
       ]
     }
 
-    const sortedShifts = _shifts.length
-      ? _.sortBy(_shifts, 'start').map((s) => ({
-          id: s.start + s.userID,
-          shift: s,
-          start: DateTime.fromISO(s.start, { zone }),
-          end: DateTime.fromISO(s.end, { zone }),
-          added: false,
-          interval: Interval.fromDateTimes(
-            DateTime.fromISO(s.start, { zone }),
-            DateTime.fromISO(s.end, { zone }),
-          ),
-          isValid: schedInterval.engulfs(parseInterval(s)),
-        }))
-      : []
+    const sortedShifts = _.sortBy(_shifts, 'start').map((s) => ({
+      id: s.start + s.userID,
+      shift: s,
+      start: DateTime.fromISO(s.start, { zone }),
+      end: DateTime.fromISO(s.end, { zone }),
+      added: false,
+      interval: parseInterval(s),
+      isValid: schedInterval.engulfs(parseInterval(s)),
+    }))
 
     const firstShiftStart = sortedShifts.length
       ? sortedShifts[0].start
@@ -92,19 +87,16 @@ export default function TempSchedShiftsList({
 
     // get farthest out end time
     // although shifts are sorted, the last shift may not necessarily end last
-    const lastShiftEnd = sortedShifts.length
-      ? sortedShifts.reduce(
-          (result, candidate) =>
-            candidate.end > result.end ? candidate : result,
-          sortedShifts[0],
-        ).end
-      : schedInterval.end
+    const lastShiftEnd = sortedShifts.reduce(
+      (result, candidate) => (candidate.end > result ? candidate.end : result),
+      schedInterval.end,
+    )
 
     let spanStart = DateTime.min(schedInterval.start, firstShiftStart).startOf(
       'day',
     )
     if (edit)
-      spanStart = DateTime.max(spanStart, DateTime.utc().startOf('hour'))
+      spanStart = DateTime.max(spanStart, DateTime.now().startOf('hour'))
 
     const displaySpan = Interval.fromDateTimes(
       spanStart,

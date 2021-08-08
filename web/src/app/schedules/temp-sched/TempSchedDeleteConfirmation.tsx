@@ -1,7 +1,7 @@
 import React from 'react'
 import { useMutation, gql } from '@apollo/client'
 import FormDialog from '../../dialogs/FormDialog'
-import { fmt, Value } from './sharedUtils'
+import { Value } from './sharedUtils'
 import { DateTime } from 'luxon'
 
 const mutation = gql`
@@ -15,6 +15,9 @@ type TempSchedDeleteConfirmationProps = {
   onClose: () => void
   value: Value
 }
+
+const fmt = (t: string, zone = 'local'): string =>
+  DateTime.fromISO(t, { zone }).toLocaleString(DateTime.DATETIME_MED)
 
 export default function TempSchedDeleteConfirmation({
   scheduleID,
