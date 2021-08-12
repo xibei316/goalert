@@ -1,4 +1,4 @@
-import { formatTimeSince, logTimeFormat } from './timeFormat'
+import { formatTimeSince, logTimeFormat, relativeDate } from './timeFormat'
 import { DateTime, Duration } from 'luxon'
 
 describe('formatTimeSince', () => {
@@ -39,4 +39,27 @@ describe('logTimeFormat', () => {
   check(to, from, 'Last Saturday at 12:00 AM')
   from = from.plus({ days: 7 })
   check(to, from, '05/25/2019')
+})
+
+describe('relativeDate', () => {
+  it('should handle timezones', () => {
+    // '2021-08-15T00:00:00.000-04:00'
+    const to = DateTime.fromObject({
+      year: 2021,
+      month: 8,
+      day: 15,
+      zone: 'America/New_York',
+    }).toISO()
+
+    // '2021-08-12T11:00:00.000-05:00'
+    const from = DateTime.fromObject({
+      year: 2021,
+      month: 8,
+      day: 12,
+      hour: 11,
+      zone: 'America/Chicago',
+    }).toISO()
+
+    expect(relativeDate(to, from)).toBe('This Sunday, August 15')
+  })
 })
