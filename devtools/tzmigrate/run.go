@@ -38,7 +38,8 @@ func main() {
 
 	values := strings.Join(pairs, ",")
 
-	sql := "UPDATE schedules AS s SET time_zone = s2.new FROM (VALUES " + values + "\n) AS s2(old, new) WHERE s.time_zone = s2.old;"
+	q1 := "UPDATE schedules SET time_zone = new FROM (VALUES " + values + "\n) AS tzmap(old, new) WHERE time_zone = old;"
+	q2 := "UPDATE rotations SET time_zone = new FROM (VALUES " + values + "\n) AS tzmap(old, new) WHERE time_zone = old;"
 
-	fmt.Print(sql)
+	fmt.Print(q1 + "\n\n" + q2 + "\n")
 }
