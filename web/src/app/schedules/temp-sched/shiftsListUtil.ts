@@ -14,8 +14,8 @@ export const fmtTime = (dt: DateTime): string =>
   dt.toLocaleString(DateTime.TIME_SIMPLE)
 
 export type Sortable<T> = T & {
-  // at is the earliest point in time for a list item
-  at: DateTime
+  // span is an interval from the earliest point in time for a list item to the latest
+  span: Interval
   // itemType categorizes a list item
   itemType: 'subheader' | 'gap' | 'shift' | 'start' | 'end' | 'outOfBounds'
 }
@@ -45,11 +45,14 @@ export function getSubheaderItems(
   )
 
   return dayInvs.map((day) => {
-    const at = day.start.startOf('day')
+    const span = Interval.fromDateTimes(
+      day.start.startOf('day'),
+      day.start.endOf('day'),
+    )
     return {
-      id: 'header_' + at.toISO(),
+      id: 'header_' + span.start.toISO(),
       subHeader: day.start.toFormat('cccc, LLLL d'),
-      at,
+      span,
       itemType: 'subheader',
     }
   })
@@ -102,7 +105,10 @@ export function getOutOfBoundsItems(
       type: 'INFO',
       message: '',
       details,
-      at: interval.start.startOf('day'),
+      span: Interval.fromDateTimes(
+        interval.start.startOf('day'),
+        interval.start.endOf('day'),
+      ),
       itemType: 'outOfBounds',
     }
   })
@@ -140,10 +146,8 @@ export function getCoverageGapItems(
       type: 'WARNING',
       message: '',
       details,
-      at: gap.start,
-      ends: gap.end,
+      span: Interval.fromDateTimes(gap.start, gap.end),
       itemType: 'gap',
-      disabled: gap.end < DateTime.now().setZone(zone),
       handleOnClick: () => {
         handleCoverageClick(gap)
       },
@@ -155,8 +159,8 @@ export function sortItems(
   items: Sortable<FlatListListItem>[],
 ): Sortable<FlatListListItem>[] {
   return items.sort((a, b) => {
-    if (a.at < b.at) return -1
-    if (a.at > b.at) return 1
+    if (a.span.start < b.span.start) return -1
+    if (a.span.start > b.span.start) return 1
 
     // a and b are at same time; use item type priority instead
     // subheaders first

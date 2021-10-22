@@ -18,7 +18,7 @@ import { UserAvatar } from '../../util/avatars'
 import { useUserInfo } from '../../util/useUserInfo'
 import { parseInterval } from '../../util/shifts'
 import { useScheduleTZ } from './hooks'
-import { Chip, CircularProgress } from '@material-ui/core'
+import { CircularProgress } from '@material-ui/core'
 import { splitAtMidnight } from '../../util/luxon-helpers'
 import {
   fmtTime,
@@ -63,7 +63,10 @@ export default function TempSchedShiftsList({
 }: TempSchedShiftsListProps): JSX.Element {
   const classes = useStyles()
   const { q, zone } = useScheduleTZ(scheduleID)
-  const now = useMemo(() => DateTime.now().setZone(zone), [zone])
+  const now = useMemo(
+    () => DateTime.now().setZone(zone).plus({ day: 3 }),
+    [zone],
+  )
   const shifts = useUserInfo(value)
 
   // wait for zone
@@ -133,7 +136,6 @@ export default function TempSchedShiftsList({
             subText,
             userID: s.userID,
             icon: <UserAvatar userID={s.userID} />,
-            disabled: isHistoricShift,
             secondaryAction:
               index === 0 ? (
                 <div className={classes.secondaryActionWrapper}>
@@ -145,9 +147,7 @@ export default function TempSchedShiftsList({
                       <Error color='error' />
                     </Tooltip>
                   )}
-                  {isHistoricShift ? (
-                    <Chip style={{ opacity: 0.6 }} label='Concluded' />
-                  ) : (
+                  {!isHistoricShift && (
                     <IconButton
                       aria-label='delete shift'
                       onClick={() => onRemove(s)}
@@ -157,7 +157,7 @@ export default function TempSchedShiftsList({
                   )}
                 </div>
               ) : null,
-            at: inv.start,
+            span: inv,
             itemType: 'shift',
           } as Sortable<FlatListItem>
         })
@@ -168,9 +168,9 @@ export default function TempSchedShiftsList({
       let details = `Starts at ${fmtTime(DateTime.fromISO(start, { zone }))}`
       let message = ''
 
-      if (edit && DateTime.fromISO(start, { zone }) < now) {
+      if (edit && DateTime.fromISO(start) < now) {
         message = 'Currently active'
-        details = 'Historical shifts will not be displayed'
+        details = 'Historical shifts are not editable'
       }
 
       return {
@@ -179,7 +179,10 @@ export default function TempSchedShiftsList({
         icon: <ScheduleIcon />,
         message,
         details,
-        at: DateTime.fromISO(start, { zone }),
+        span: Interval.fromDateTimes(
+          DateTime.fromISO(start),
+          DateTime.fromISO(start),
+        ),
         itemType: 'start',
       } as Sortable<FlatListNotice>
     })()
@@ -196,7 +199,10 @@ export default function TempSchedShiftsList({
         icon: <ScheduleIcon />,
         message: '',
         details,
-        at,
+        span: Interval.fromDateTimes(
+          DateTime.fromISO(end),
+          DateTime.fromISO(end),
+        ),
         itemType: 'end',
       } as Sortable<FlatListNotice>
     })()
@@ -208,7 +214,7 @@ export default function TempSchedShiftsList({
       ...outOfBoundsItems,
       startItem,
       endItem,
-    ])
+    ]).map((i) => (i.span.end <= now ? { ...i, disabled: true } : i))
   }
 
   return (

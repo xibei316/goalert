@@ -360,7 +360,7 @@ export default function TempSchedDialog({
                 <TempSchedShiftsList
                   scheduleID={scheduleID}
                   value={value.shifts}
-                  start={_value?.start ? now : value.start}
+                  start={value.start}
                   end={value.end}
                   onRemove={(shift: Shift) => {
                     setValue({
