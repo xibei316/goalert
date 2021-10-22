@@ -63,10 +63,7 @@ export default function TempSchedShiftsList({
 }: TempSchedShiftsListProps): JSX.Element {
   const classes = useStyles()
   const { q, zone } = useScheduleTZ(scheduleID)
-  const now = useMemo(
-    () => DateTime.now().setZone(zone).plus({ day: 3 }),
-    [zone],
-  )
+  const now = useMemo(() => DateTime.now().setZone(zone), [zone])
   const shifts = useUserInfo(value)
 
   // wait for zone
