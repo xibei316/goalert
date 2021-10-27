@@ -154,7 +154,20 @@ export function getCoverageGapItems(
 export function sortItems(
   items: Sortable<FlatListListItem>[],
 ): Sortable<FlatListListItem>[] {
-  return items.sort((a, b) => {
+  // const dayLists: any[] = []
+  // items.forEach((item) => {
+
+  // })
+
+  const newItems = items.sort((a, b) => {
+    if (a.at.startOf('day') < b.at.startOf('day')) return -1
+    if (a.at.startOf('day') > b.at.startOf('day')) return 1
+    return 0
+  })
+
+  console.log('i', items, newItems)
+
+  return newItems.sort((a, b) => {
     if (a.at < b.at) return -1
     if (a.at > b.at) return 1
 
