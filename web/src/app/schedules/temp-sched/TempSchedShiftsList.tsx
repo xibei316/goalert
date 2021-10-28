@@ -47,7 +47,7 @@ export default function TempSchedShiftsList({
 
   const now = useMemo(() => DateTime.now().setZone(zone), [zone])
 
-  const results = useShiftList({
+  const shiftListItems = useShiftList({
     shifts: value,
     options: {
       zone,
@@ -73,10 +73,10 @@ export default function TempSchedShiftsList({
 
   return (
     <div data-cy='shifts-list'>
-      {Object.entries(results).map(([key, value]) => (
+      {Object.entries(shiftListItems).map(([key, value]) => (
         <FlatList
           key={key}
-          items={value as any[]}
+          items={value}
           emptyMessage='Add a user to the left to get started.'
           dense
           transition

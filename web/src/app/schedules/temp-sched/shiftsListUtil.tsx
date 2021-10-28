@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { Tooltip, Chip } from '@material-ui/core'
+import Chip from '@material-ui/core/Chip/Chip'
 import _ from 'lodash'
 import { DateTime, Interval } from 'luxon'
 
@@ -19,6 +19,7 @@ import Error from '@material-ui/icons/Error'
 import Tooltip from '@material-ui/core/Tooltip/Tooltip'
 import IconButton from '@material-ui/core/IconButton'
 import { ShiftOptions } from './hooks'
+import ScheduleIcon from '@material-ui/icons/Schedule'
 
 export const fmtTime = (dt: DateTime): string =>
   dt.toLocaleString(DateTime.TIME_SIMPLE)
@@ -195,7 +196,7 @@ export function getShiftItems(
         id: s.start + s.userID + index.toString(),
         title: s.user?.name,
         subText,
-        userID: s.userID,
+        userID: s!.userID, // todo - spencer
         icon: <UserAvatar userID={s.userID} />,
         disabled: isHistoricShift,
         secondaryAction:
@@ -233,34 +234,6 @@ export function getShiftItems(
 export function getScheduleStartItem(
   shifts: Shift[],
   options: ShiftOptions,
-): Sortable<FlatListItem>[] {
-  let details = `Starts at ${fmtTime(
-    DateTime.fromISO(options.start, { zone: options.zone }),
-  )}`
-  let message = ''
-
-  if (
-    options.edit &&
-    DateTime.fromISO(options.start, { zone: options.zone }) < now
-  ) {
-    message = 'Currently active'
-    details = 'Historical shifts will not be displayed'
-  }
-
-  return {
-    id: 'sched-start_' + options.start,
-    type: 'OK',
-    icon: <ScheduleIcon />,
-    message,
-    details,
-    at: DateTime.fromISO(options.start, { zone: options.zone }),
-    itemType: 'start',
-  } as Sortable<FlatListNotice>
-}
-
-export function getScheduleEndItem(
-  shifts: Shift[],
-  options: ShiftOptions,
 ): Sortable<FlatListItem> {
   let details = `Starts at ${fmtTime(
     DateTime.fromISO(options.start, { zone: options.zone }),
@@ -283,6 +256,28 @@ export function getScheduleEndItem(
     details,
     at: DateTime.fromISO(options.start, { zone: options.zone }),
     itemType: 'start',
+  }
+
+  return item
+}
+
+export function getScheduleEndItem(
+  shifts: Shift[],
+  options: ShiftOptions,
+): Sortable<FlatListItem> {
+  const at = DateTime.fromISO(options.end, { zone: options.zone })
+  const details = at.equals(at.startOf('day'))
+    ? 'Ends at midnight'
+    : 'Ends at ' + fmtTime(at)
+
+  const item: Sortable<FlatListNotice> = {
+    id: 'sched-end_' + options.end,
+    type: 'OK',
+    icon: <ScheduleIcon />,
+    message: '',
+    details,
+    at,
+    itemType: 'end',
   }
 
   return item
