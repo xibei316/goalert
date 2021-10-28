@@ -1,14 +1,24 @@
+import React from 'react'
+
+import { Tooltip, Chip } from '@material-ui/core'
 import _ from 'lodash'
 import { DateTime, Interval } from 'luxon'
 
 import {
+  FlatListItem,
   FlatListListItem,
   FlatListNotice,
   FlatListSub,
 } from '../../lists/FlatList'
+import { UserAvatar } from '../../util/avatars'
 import { ExplicitZone, splitAtMidnight } from '../../util/luxon-helpers'
 import { parseInterval } from '../../util/shifts'
 import { Shift } from './sharedUtils'
+import Delete from '@material-ui/icons/Delete'
+import Error from '@material-ui/icons/Error'
+import Tooltip from '@material-ui/core/Tooltip/Tooltip'
+import IconButton from '@material-ui/core/IconButton'
+import { ShiftOptions } from './hooks'
 
 export const fmtTime = (dt: DateTime): string =>
   dt.toLocaleString(DateTime.TIME_SIMPLE)
@@ -149,6 +159,133 @@ export function getCoverageGapItems(
       },
     }
   })
+}
+
+export function getShiftItems(
+  shifts: Shift[],
+  options: ShiftOptions,
+): Sortable<FlatListItem>[] {
+  return _.flatMap(shifts, (s) => {
+    const shiftInv = parseInterval(s, options.zone)
+    const isValid = options.schedInterval.engulfs(shiftInv)
+    const dayInvs = splitAtMidnight(shiftInv)
+
+    return dayInvs.map((inv, index) => {
+      const startTime = fmtTime(inv.start)
+      const endTime = fmtTime(inv.end)
+      const isHistoricShift =
+        DateTime.fromISO(s.end, { zone: options.zone }) < options.now
+
+      let subText = ''
+      if (inv.length('hours') === 24) {
+        // shift spans all day
+        subText = 'All day'
+      } else if (inv.engulfs(shiftInv)) {
+        // shift is inside the day
+        subText = `From ${startTime} to ${endTime}`
+      } else if (inv.end === shiftInv.end) {
+        subText = `Active until ${endTime}`
+      } else {
+        // shift starts and continues on for the rest of the day
+        subText = `Active starting at ${startTime}\n`
+      }
+
+      const item: Sortable<FlatListItem> = {
+        scrollIntoView: true,
+        id: s.start + s.userID + index.toString(),
+        title: s.user?.name,
+        subText,
+        userID: s.userID,
+        icon: <UserAvatar userID={s.userID} />,
+        disabled: isHistoricShift,
+        secondaryAction:
+          index === 0 ? (
+            <div className={options.classes.secondaryActionWrapper}>
+              {!isValid && !isHistoricShift && (
+                <Tooltip
+                  title='This shift extends beyond the start and/or end of this temporary schedule'
+                  placement='left'
+                >
+                  <Error color='error' />
+                </Tooltip>
+              )}
+              {isHistoricShift ? (
+                <Chip style={{ opacity: 0.6 }} label='Concluded' />
+              ) : (
+                <IconButton
+                  aria-label='delete shift'
+                  onClick={() => options.onRemove(s)}
+                >
+                  <Delete />
+                </IconButton>
+              )}
+            </div>
+          ) : null,
+        at: inv.start,
+        itemType: 'shift',
+      }
+
+      return item
+    })
+  })
+}
+
+export function getScheduleStartItem(
+  shifts: Shift[],
+  options: ShiftOptions,
+): Sortable<FlatListItem>[] {
+  let details = `Starts at ${fmtTime(
+    DateTime.fromISO(options.start, { zone: options.zone }),
+  )}`
+  let message = ''
+
+  if (
+    options.edit &&
+    DateTime.fromISO(options.start, { zone: options.zone }) < now
+  ) {
+    message = 'Currently active'
+    details = 'Historical shifts will not be displayed'
+  }
+
+  return {
+    id: 'sched-start_' + options.start,
+    type: 'OK',
+    icon: <ScheduleIcon />,
+    message,
+    details,
+    at: DateTime.fromISO(options.start, { zone: options.zone }),
+    itemType: 'start',
+  } as Sortable<FlatListNotice>
+}
+
+export function getScheduleEndItem(
+  shifts: Shift[],
+  options: ShiftOptions,
+): Sortable<FlatListItem> {
+  let details = `Starts at ${fmtTime(
+    DateTime.fromISO(options.start, { zone: options.zone }),
+  )}`
+  let message = ''
+
+  if (
+    options.edit &&
+    DateTime.fromISO(options.start, { zone: options.zone }) < options.now
+  ) {
+    message = 'Currently active'
+    details = 'Historical shifts will not be displayed'
+  }
+
+  const item: Sortable<FlatListNotice> = {
+    id: 'sched-start_' + options.start,
+    type: 'OK',
+    icon: <ScheduleIcon />,
+    message,
+    details,
+    at: DateTime.fromISO(options.start, { zone: options.zone }),
+    itemType: 'start',
+  }
+
+  return item
 }
 
 export function sortItems(

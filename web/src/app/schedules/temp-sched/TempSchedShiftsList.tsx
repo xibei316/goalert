@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import makeStyles from '@material-ui/core/styles/makeStyles'
-import { Interval } from 'luxon'
+import { DateTime, Interval } from 'luxon'
 
 import { Shift } from './sharedUtils'
 import FlatList from '../../lists/FlatList'
@@ -45,6 +45,8 @@ export default function TempSchedShiftsList({
   const { q, zone } = useScheduleTZ(scheduleID)
   const schedInterval = parseInterval({ start, end }, zone)
 
+  const now = useMemo(() => DateTime.now().setZone(zone), [zone])
+
   const results = useShiftList({
     shifts: value,
     options: {
@@ -55,6 +57,8 @@ export default function TempSchedShiftsList({
       onRemove,
       handleCoverageGapClick,
       schedInterval,
+      now,
+      classes,
     },
   })
 
