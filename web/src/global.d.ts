@@ -17,3 +17,10 @@ declare module 'modernizr-esm/feature/inputtypes' {
   import * as m from 'modernizr'
   export const inputtypes = m.inputtypes
 }
+
+// any && object type map
+// used for objects with unknown key/values from parent
+interface ObjectMap {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any
+}
