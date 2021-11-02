@@ -17,13 +17,6 @@ import ControlledPaginatedList, {
   ControlledPaginatedListProps,
 } from './ControlledPaginatedList'
 
-// any && object type map
-// used for objects with unknown key/values from parent
-interface ObjectMap {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
-}
-
 const buildFetchMore = (
   fetchMore: QueryResult['fetchMore'],
   after: string,
