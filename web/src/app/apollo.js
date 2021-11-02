@@ -178,6 +178,13 @@ const cache = new InMemoryCache({
         },
       },
     },
+    UserOverrideConnection: {
+      fields: {
+        nodes: {
+          merge: false,
+        },
+      },
+    },
   },
 })
 
