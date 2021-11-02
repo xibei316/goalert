@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { gql, useQuery } from '@apollo/client'
 import ScheduleCalendar from './ScheduleCalendar'
 import { getStartOfWeek, getEndOfWeek } from '../../util/luxon-helpers'
@@ -12,8 +12,11 @@ const query = gql`
     $id: ID!
     $start: ISOTimestamp!
     $end: ISOTimestamp!
+    $after: String
   ) {
-    userOverrides(input: { scheduleID: $id, start: $start, end: $end }) {
+    userOverrides(
+      input: { scheduleID: $id, start: $start, end: $end, after: $after }
+    ) {
       nodes {
         id
         start
@@ -84,13 +87,32 @@ function ScheduleCalendarQuery({
         getEndOfWeek(DateTime.fromISO(start).endOf('month')).toISO(),
       ]
 
-  const { data, error, loading } = useQuery<Query>(query, {
-    variables: {
-      id: scheduleID,
-      start: queryStart,
-      end: queryEnd,
-    },
+  const variables = {
+    id: scheduleID,
+    start: queryStart,
+    end: queryEnd,
+  }
+
+  const { data, error, loading, fetchMore } = useQuery<Query>(query, {
+    variables,
   })
+
+  const hasNextPage = data?.userOverrides?.pageInfo?.hasNextPage
+  const endCursor = data?.userOverrides?.pageInfo?.endCursor
+
+  useEffect(() => {
+    if (hasNextPage && endCursor) {
+      console.log('fetching more')
+      fetchMore({
+        variables: {
+          ...variables,
+          after: endCursor,
+        },
+      }).catch((err) => console.log(err))
+    }
+  }, [hasNextPage, endCursor])
+
+  console.log('num overrides: ', data?.userOverrides?.nodes.length)
 
   if (error) return <GenericError error={error.message} />
   if (!loading && !data?.schedule?.id) return <ObjectNotFound type='schedule' />
