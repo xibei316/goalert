@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { useMutation, gql } from '@apollo/client'
 import { PropTypes as p } from 'prop-types'
+import { Alert, AlertTitle } from '@material-ui/lab'
 import FormDialog from '../../dialogs/FormDialog'
 import CalendarSubscribeForm from './CalendarSubscribeForm'
 import { fieldErrors, nonFieldErrors } from '../../util/errutil'
-import { makeStyles, Typography } from '@material-ui/core'
-import { CheckCircleOutline as SuccessIcon } from '@material-ui/icons'
+import { CheckCircleOutline } from '@material-ui/icons'
 import CalenderSuccessForm from './CalendarSuccessForm'
 
 const mutation = gql`
@@ -17,38 +17,7 @@ const mutation = gql`
   }
 `
 
-const useStyles = makeStyles((theme) => ({
-  successIcon: {
-    marginRight: theme.spacing(1),
-  },
-  successTitle: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-}))
-
-const SUBTITLE =
-  'Create a unique iCalendar subscription URL that can be used in your preferred calendar application.'
-
-export function getSubtitle(isComplete, defaultSubtitle) {
-  const completedSubtitle =
-    'Your subscription has been created! You can' +
-    ' manage your subscriptions from your profile at any time.'
-
-  return isComplete ? completedSubtitle : defaultSubtitle
-}
-
-export function getForm(isComplete, defaultForm, data) {
-  return isComplete ? (
-    <CalenderSuccessForm url={data.createUserCalendarSubscription.url} />
-  ) : (
-    defaultForm
-  )
-}
-
 export default function CalendarSubscribeCreateDialog(props) {
-  const classes = useStyles()
-
   const [value, setValue] = useState({
     name: '',
     scheduleID: props.scheduleID || null,
@@ -67,8 +36,18 @@ export default function CalendarSubscribeCreateDialog(props) {
   })
 
   const isComplete = Boolean(status?.data?.createUserCalendarSubscription?.url)
+  const subTitle = isComplete ? (
+    <Alert severity='success' icon={<CheckCircleOutline />}>
+      <AlertTitle>Subscription was created successfully.</AlertTitle>
+      You can manage subscriptions from your profile at any time.
+    </Alert>
+  ) : (
+    'This will generate an iCalendar subscription URL to be used in your preferred calendar application.'
+  )
 
-  const form = (
+  const form = isComplete ? (
+    <CalenderSuccessForm url={status.data.createUserCalendarSubscription.url} />
+  ) : (
     <CalendarSubscribeForm
       errors={fieldErrors(status.error)}
       loading={status.loading}
@@ -80,23 +59,14 @@ export default function CalendarSubscribeCreateDialog(props) {
 
   return (
     <FormDialog
-      title={
-        isComplete ? (
-          <div className={classes.successTitle}>
-            <SuccessIcon className={classes.successIcon} />
-            <Typography>Success!</Typography>
-          </div>
-        ) : (
-          'Create New Calendar Subscription'
-        )
-      }
-      subTitle={getSubtitle(isComplete, SUBTITLE)}
+      title='Create New Calendar Subscription'
+      subTitle={subTitle}
       onClose={props.onClose}
       alert={isComplete}
       errors={nonFieldErrors(status.error)}
       primaryActionLabel={isComplete ? 'Done' : null}
       onSubmit={() => (isComplete ? props.onClose() : createSubscription())}
-      form={getForm(isComplete, form, status.data)}
+      form={form}
     />
   )
 }

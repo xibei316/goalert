@@ -21,7 +21,7 @@ export default function CalendarSubscribeForm(props) {
             component={TextField}
             name='name'
             placeholder='My iCloud Calendar'
-            hint='This name is only used for GoAlert, and will not appear in your calendar app.'
+            hint='This name is only used for GoAlert and will not appear in your calendar app.'
             required
           />
         </Grid>
