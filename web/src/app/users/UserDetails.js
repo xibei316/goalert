@@ -14,7 +14,6 @@ import { Grid } from '@material-ui/core'
 import UserContactMethodCreateDialog from './UserContactMethodCreateDialog'
 import UserNotificationRuleCreateDialog from './UserNotificationRuleCreateDialog'
 import UserContactMethodVerificationDialog from './UserContactMethodVerificationDialog'
-import _ from 'lodash'
 import Spinner from '../loading/components/Spinner'
 import { GenericError, ObjectNotFound } from '../error-pages'
 import { useConfigValue, useSessionInfo } from '../util/RequireConfig'
@@ -22,66 +21,13 @@ import UserEditDialog from './UserEditDialog'
 import UserDeleteDialog from './UserDeleteDialog'
 import { QuerySetFavoriteButton } from '../util/QuerySetFavoriteButton'
 
-const userQuery = gql`
-  query userInfo($id: ID!) {
-    user(id: $id) {
-      id
-      role
-      name
-      email
-      contactMethods {
-        id
-      }
-      onCallSteps {
-        id
-        escalationPolicy {
-          id
-          assignedTo {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-`
-
-const profileQuery = gql`
-  query profileInfo($id: ID!) {
-    user(id: $id) {
-      id
-      role
-      name
-      email
-      contactMethods {
-        id
-      }
-      onCallSteps {
-        id
-        escalationPolicy {
-          id
-          assignedTo {
-            id
-            name
-          }
-        }
-      }
-      sessions {
-        id
-      }
-    }
-  }
-`
-
 function serviceCount(onCallSteps = []) {
-  const svcs = {}
-  ;(onCallSteps || []).forEach((s) =>
-    (s.escalationPolicy.assignedTo || []).forEach(
-      (svc) => (svcs[svc.id] = true),
-    ),
+  const set = new Set()
+  onCallSteps.forEach((step) =>
+    (step.escalationPolicy.assignedTo || []).forEach((svc) => set.add(svc.id)),
   )
 
-  return Object.keys(svcs).length
+  return set.size
 }
 
 export default function UserDetails(props) {
@@ -97,37 +43,56 @@ export default function UserDetails(props) {
   const [showVerifyDialogByID, setShowVerifyDialogByID] = useState(null)
   const [showUserDeleteDialog, setShowUserDeleteDialog] = useState(false)
 
+  const query = gql`
+  query profileInfo($id: ID!) {
+    user(id: $id) {
+      id
+      role
+      name
+      email
+      contactMethods {
+        id
+      }
+      onCallSteps {
+        id
+        escalationPolicy {
+          id
+          assignedTo {
+            id
+          }
+        }
+      }
+      ${isAdmin || props.userID === currentUserID ? 'sessions {id}' : ''}
+      ${props.userID === currentUserID ? 'calendarSubscriptions {id}' : ''}
+    }
+  }
+`
+
   const {
     data,
     loading: isQueryLoading,
     error,
-  } = useQuery(
-    isAdmin || props.userID === currentUserID ? profileQuery : userQuery,
-    {
-      variables: { id: props.userID },
-      skip: !isSessionReady,
-    },
-  )
+  } = useQuery(query, {
+    variables: { id: props.userID },
+    skip: !isSessionReady,
+  })
 
   const loading = !isSessionReady || isQueryLoading
 
   if (error) return <GenericError error={error.message} />
-  if (!_.get(data, 'user.id')) return loading ? <Spinner /> : <ObjectNotFound />
+  if (!data?.user?.id) return loading ? <Spinner /> : <ObjectNotFound />
 
-  const user = _.get(data, 'user')
+  const user = data.user
   const svcCount = serviceCount(user.onCallSteps)
-  const sessCount =
-    isAdmin || props.userID === currentUserID ? user.sessions.length : 0
-
+  const sessCount = user.sessions.length
+  const subCount = user.calendarSubscriptions.length
   const disableNR = user.contactMethods.length === 0
 
   const links = [
     {
       label: 'On-Call Assignments',
       url: 'on-call-assignments',
-      subText: svcCount
-        ? `On-call for ${svcCount} service${svcCount > 1 ? 's' : ''}`
-        : 'Not currently on-call',
+      subText: `On-call for ${svcCount} service${svcCount === 1 ? '' : 's'}`,
     },
   ]
 
@@ -135,7 +100,7 @@ export default function UserDetails(props) {
     links.push({
       label: 'Schedule Calendar Subscriptions',
       url: 'schedule-calendar-subscriptions',
-      subText: 'Manage schedules you have subscribed to',
+      subText: `${subCount} calendar subscription${subCount === 1 ? '' : 's'}`,
     })
   }
 
@@ -143,9 +108,7 @@ export default function UserDetails(props) {
     links.push({
       label: 'Active Sessions',
       url: 'sessions',
-      subText: `${sessCount || 'No'} active session${
-        sessCount === 1 ? '' : 's'
-      }`,
+      subText: `${sessCount} active session${sessCount === 1 ? '' : 's'}`,
     })
   }
 
