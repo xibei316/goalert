@@ -6,8 +6,6 @@ import (
 	"embed"
 	"encoding/hex"
 	"fmt"
-	"github.com/target/goalert/config"
-	"github.com/target/goalert/util/errutil"
 	"io/fs"
 	"net/http"
 	"net/http/httputil"
@@ -17,6 +15,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/target/goalert/config"
+	"github.com/target/goalert/util/errutil"
 )
 
 //go:embed src/build
@@ -62,6 +62,7 @@ func NewHandler(urlStr, prefix string) (http.Handler, error) {
 			return nil, errors.Wrap(err, "parse url")
 		}
 		proxy := httputil.NewSingleHostReverseProxy(u)
+		proxy.FlushInterval = -1
 		mux.Handle("/static/", proxy)
 		mux.Handle("/build/", proxy)
 

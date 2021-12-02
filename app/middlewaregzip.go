@@ -33,7 +33,7 @@ func wrapGzip(next http.Handler) http.Handler {
 		var check sync.Once
 		cleanup := func() {}
 		getOutput := func() {
-			if w.Header().Get("Content-Encoding") != "" || w.Header().Get("Content-Type") == "" {
+			if w.Header().Get("Content-Encoding") != "" || w.Header().Get("Content-Type") == "" || w.Header().Get("Content-Type") == "text/event-stream" {
 				// already encoded
 				output = w
 				return

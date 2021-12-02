@@ -44,14 +44,6 @@
   },
   {
     "Name": "UI",
-    "Command": [
-      "yarn",
-      "workspace",
-      "goalert-web",
-      "webpack",
-      "serve",
-      "--config",
-      "./webpack.config.js"
-    ]
+    "Command": ["go", "run", "./devtools/esbuild/run.go"]
   }
 ]
