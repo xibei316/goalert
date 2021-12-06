@@ -6,14 +6,26 @@ import {
   TableHead,
   TableBody,
 } from '@material-ui/core'
+import { makeStyles, Theme } from '@material-ui/core/styles'
 import _ from 'lodash'
 import { TableRow, Card, Table } from 'mdi-material-ui'
 import Countdown from 'react-countdown'
 import { RotationLink, ScheduleLink, UserLink } from '../../links'
 import AppLink from '../../util/AppLink'
+import { Rotation, Schedule, User } from '../../../schema'
+import { styles } from '../../styles/materialStyles'
+
+const useStyles = makeStyles((theme: Theme) => {
+  return styles(theme as Theme)
+})
 
 export default function AlertDefaultsEPInfo(): JSX.Element {
-  function renderRotations(rotations, stepID): JSX.Element[] {
+  const classes = useStyles()
+
+  function renderRotations(
+    rotations: Rotation[],
+    stepID: string,
+  ): JSX.Element[] {
     return _.sortBy(rotations, 'name').map((rotation, i) => {
       const sep = i === 0 ? '' : ', '
       return (
@@ -25,7 +37,10 @@ export default function AlertDefaultsEPInfo(): JSX.Element {
     })
   }
 
-  function renderSchedules(schedules, stepID): JSX.Element[] {
+  function renderSchedules(
+    schedules: Schedule[],
+    stepID: string,
+  ): JSX.Element[] {
     return _.sortBy(schedules, 'name').map((schedule, i) => {
       const sep = i === 0 ? '' : ', '
       return (
@@ -37,7 +52,7 @@ export default function AlertDefaultsEPInfo(): JSX.Element {
     })
   }
 
-  function renderUsers(users, stepID): JSX.Element[] {
+  function renderUsers(users: User[], stepID: string): JSX.Element[] {
     return _.sortBy(users, 'name').map((user, i) => {
       const sep = i === 0 ? '' : ', '
       return (
@@ -66,45 +81,6 @@ export default function AlertDefaultsEPInfo(): JSX.Element {
       currentLevel: state?.stepNumber,
       lastEscalation: state?.lastEscalation,
     }
-  }
-
-  function canAutoEscalate(): JSX.Element {
-    const { repeat, numSteps, status, currentLevel } = epsHelper()
-    if (status !== 'StatusUnacknowledged') return false
-    if (repeat === -1) return true
-    return currentLevel + 1 < numSteps * (repeat + 1)
-  }
-
-  /*
-   * Renders a timer that counts down time until the next escalation
-   */
-  function renderTimer(index, delayMinutes): JSX.Element {
-    const { currentLevel, numSteps, lastEscalation } = epsHelper()
-    const prevEscalation = new Date(lastEscalation)
-
-    if (currentLevel % numSteps === index && canAutoEscalate()) {
-      return (
-        <Countdown
-          date={new Date(prevEscalation.getTime() + delayMinutes * 60000)}
-          renderer={(props) => {
-            const { hours, minutes, seconds } = props
-
-            const hourTxt = parseInt(hours)
-              ? `${hours} hour${parseInt(hours) === 1 ? '' : 's'} `
-              : ''
-            const minTxt = parseInt(minutes)
-              ? `${minutes} minute${parseInt(minutes) === 1 ? '' : 's'} `
-              : ''
-            const secTxt = `${seconds} second${
-              parseInt(seconds) === 1 ? '' : 's'
-            }`
-
-            return hourTxt + minTxt + secTxt
-          }}
-        />
-      )
-    }
-    return <Typography>&mdash;</Typography>
   }
 
   function renderEscalationPolicySteps(): JSX.Element {
@@ -156,7 +132,6 @@ export default function AlertDefaultsEPInfo(): JSX.Element {
             {schedulesRender}
             {usersRender}
           </TableCell>
-          <TableCell>{renderTimer(index, delayMinutes)}</TableCell>
         </TableRow>
       )
     })
@@ -179,11 +154,6 @@ export default function AlertDefaultsEPInfo(): JSX.Element {
             <TableRow>
               <TableCell>Step</TableCell>
               <TableCell>Alert</TableCell>
-              <TableCell>
-                {canAutoEscalate()
-                  ? 'Time Until Next Escalation'
-                  : 'Time Between Escalations'}
-              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>{renderEscalationPolicySteps()}</TableBody>
