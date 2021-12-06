@@ -2,7 +2,6 @@ package engine
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -190,15 +189,11 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 	}
 
 	if isFirstAlertMessage && res.State.IsOK() {
-		var chanID, cmID sql.NullString
 		if msg.Dest.Type.IsUserCM() {
-			cmID.Valid = true
-			cmID.String = msg.Dest.ID
+			_, err = p.b.trackStatusUser.ExecContext(ctx, msg.UserID, msg.AlertID)
 		} else {
-			chanID.Valid = true
-			chanID.String = msg.Dest.ID
+			_, err = p.b.trackStatusNC.ExecContext(ctx, msg.Dest.ID, msg.AlertID)
 		}
-		_, err = p.b.trackStatus.ExecContext(ctx, chanID, cmID, msg.AlertID)
 		if err != nil {
 			// non-fatal, but log because it means status updates will not work for that alert/dest.
 			log.Log(ctx, fmt.Errorf("track status updates for alert #%d for %s: %w", msg.AlertID, msg.Dest.String(), err))

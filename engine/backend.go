@@ -15,7 +15,8 @@ type backend struct {
 
 	findOne *sql.Stmt
 
-	trackStatus *sql.Stmt
+	trackStatusNC   *sql.Stmt
+	trackStatusUser *sql.Stmt
 
 	clientID string
 
@@ -40,9 +41,16 @@ func newBackend(db *sql.DB) (*backend, error) {
 			WHERE id = $1
 		`),
 
-		trackStatus: p.P(`
-			insert into alert_status_subscriptions (channel_id, contact_method_id, alert_id, last_alert_status)
-			values ($1, $2, $3, 'triggered')
+		trackStatusNC: p.P(`
+			insert into alert_status_subscriptions (channel_id, alert_id, last_alert_status)
+			values ($1, $2, 'triggered')
+		`),
+		trackStatusUser: p.P(`
+			insert into alert_status_subscriptions (contact_method_id, alert_id, last_alert_status)
+			select alert_status_log_contact_method_id, $1, 'triggered'
+			from users
+			where id = $2 and alert_status_log_contact_method_id is not null
+			on conflict do nothing
 		`),
 
 		validCM: p.P(`select true from user_contact_methods where disabled = false and type = $1 and value = $2`),
