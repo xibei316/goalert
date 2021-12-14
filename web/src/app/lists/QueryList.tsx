@@ -5,18 +5,17 @@ import {
   QueryResult,
   DocumentNode,
 } from '@apollo/client'
-import { useSelector } from 'react-redux'
 import { Grid } from '@material-ui/core'
 import { once } from 'lodash'
 import { PaginatedList, PaginatedListItemProps } from './PaginatedList'
 import { ITEMS_PER_PAGE, POLL_INTERVAL } from '../config'
-import { urlKeySelector } from '../selectors'
 import { fieldAlias } from '../util/graphql'
 import { GraphQLClientWithErrors } from '../apollo'
 import ControlledPaginatedList, {
   ControlledPaginatedListProps,
 } from './ControlledPaginatedList'
 import { useURLParam } from '../actions'
+import { useLocation } from 'react-router'
 
 // any && object type map
 // used for objects with unknown key/values from parent
@@ -104,7 +103,7 @@ export default function QueryList(props: QueryListProps): JSX.Element {
   const { input, ...vars } = variables
 
   const [searchParam] = useURLParam('search', '')
-  const urlKey = useSelector(urlKeySelector)
+  const { key: urlKey } = useLocation()
   const aliasedQuery = useMemo(() => fieldAlias(query, 'data'), [query])
 
   const queryVariables = {

@@ -12,12 +12,11 @@ import {
   PaginatedListItemProps,
   PaginatedListProps,
 } from './PaginatedList'
-import { useSelector } from 'react-redux'
-import { urlKeySelector } from '../selectors/url'
 import classnames from 'classnames'
 import OtherActions from '../util/OtherActions'
 import { ArrowDropDown } from '@material-ui/icons'
 import Search from '../util/Search'
+import { useLocation } from 'react-router'
 
 const useStyles = makeStyles({
   actionsContainer: {
@@ -124,7 +123,7 @@ export default function ControlledPaginatedList(
   const checkedItems = _checkedItems.filter((id) =>
     getSelectableIDs().includes(id),
   )
-  const urlKey = useSelector(urlKeySelector)
+  const { key: urlKey } = useLocation()
 
   function setAll(): void {
     setCheckedItems(getSelectableIDs())
