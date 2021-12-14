@@ -7,7 +7,6 @@ import {
   Check as AcknowledgeIcon,
   Close as CloseIcon,
 } from '@material-ui/icons'
-import { useSelector } from 'react-redux'
 import { DateTime } from 'luxon'
 
 import AlertsListFilter from './components/AlertsListFilter'
@@ -15,11 +14,11 @@ import AlertsListControls from './components/AlertsListControls'
 import UpdateAlertsSnackbar from './components/UpdateAlertsSnackbar'
 
 import { formatTimeSince } from '../util/timeFormat'
-import { urlParamSelector } from '../selectors'
 import QueryList from '../lists/QueryList'
 import { useIsWidthDown } from '../util/useWidth'
 import CreateFAB from '../lists/CreateFAB'
 import CreateAlertDialog from './CreateAlertDialog/CreateAlertDialog'
+import { useURLParam } from '../actions'
 
 export const alertsListQuery = gql`
   query alertsList($input: AlertSearchOptions) {
@@ -97,10 +96,9 @@ export default function AlertsList(props) {
   const [actionCompleteDismissed, setActionCompleteDismissed] = useState(true)
 
   // get redux url vars
-  const params = useSelector(urlParamSelector)
-  const allServices = params('allServices')
-  const fullTime = params('fullTime')
-  const filter = params('filter', 'active')
+  const [allServices] = useURLParam('allServices')
+  const [fullTime] = useURLParam('fullTime')
+  const [filter] = useURLParam('filter', 'active')
 
   // query for current service name if props.serviceID is provided
   const serviceNameQuery = useQuery(
