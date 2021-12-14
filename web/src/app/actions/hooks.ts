@@ -1,5 +1,3 @@
-import { urlParamSelector, urlPathSelector } from '../selectors'
-import { useSelector } from 'react-redux'
 import { warn } from '../util/debug'
 import joinURL from '../util/joinURL'
 import { pathPrefix } from '../env'
@@ -8,15 +6,30 @@ import { sanitizeParam } from './main'
 
 export type Value = string | boolean | number | string[]
 
+function useGetURLParamValue(
+  name: string,
+  _default: string | boolean | number | string[] | null = null,
+): string | boolean | number | string[] | null {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+
+  if (!params.has(name)) return _default
+
+  if (Array.isArray(_default)) return params.getAll(name)
+  if (typeof _default === 'boolean') return Boolean(params.get(name))
+  if (typeof _default === 'number') return +(params.get(name) as string) // already checked .has()
+
+  return params.get(name)
+}
+
 export function useURLParam<T extends Value>(
   name: string,
   defaultValue: T,
 ): [T, (newValue: T) => void] {
-  const urlParam = useSelector(urlParamSelector)
-  const urlPath = joinURL(pathPrefix, useSelector(urlPathSelector))
-  const value = urlParam(name, defaultValue) as T
   const location = useLocation()
   const history = useHistory()
+  const value = useGetURLParamValue(name, defaultValue) as T
+  const urlPath = joinURL(pathPrefix, location.pathname)
 
   function setValue(newValue: T): void {
     if (window.location.pathname !== urlPath) {
@@ -53,9 +66,9 @@ export function useURLParam<T extends Value>(
 }
 
 export function useResetURLParams(...keys: Array<string>): () => void {
-  const urlPath = joinURL(pathPrefix, useSelector(urlPathSelector))
   const location = useLocation()
   const history = useHistory()
+  const urlPath = joinURL(pathPrefix, location.pathname)
 
   function resetURLParams(): void {
     if (window.location.pathname !== urlPath) {
