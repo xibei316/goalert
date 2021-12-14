@@ -15,7 +15,7 @@ import ControlledPaginatedList, {
   ControlledPaginatedListProps,
 } from './ControlledPaginatedList'
 import { useURLParam } from '../actions'
-import { useLocation } from 'react-router'
+import { useLocation } from 'react-router-dom'
 
 // any && object type map
 // used for objects with unknown key/values from parent

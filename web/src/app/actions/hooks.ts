@@ -1,7 +1,7 @@
 import { warn } from '../util/debug'
 import joinURL from '../util/joinURL'
 import { pathPrefix } from '../env'
-import { useHistory, useLocation } from 'react-router'
+import { useHistory, useLocation } from 'react-router-dom'
 import { sanitizeParam } from './main'
 
 export type Value = string | boolean | number | string[]

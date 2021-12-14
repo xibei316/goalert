@@ -1,6 +1,6 @@
 import React from 'react'
 import Chip, { ChipProps } from '@material-ui/core/Chip'
-import { useHistory } from 'react-router'
+import { useHistory } from 'react-router-dom'
 import { useQuery, gql } from '@apollo/client'
 import {
   RotateRight as RotationIcon,
