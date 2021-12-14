@@ -69,11 +69,6 @@ export function setURLParam(name, _value, _default) {
   }
 }
 
-// setSearch will set the current search parameter/filter.
-export function setSearch(value) {
-  return setURLParam('search', value || '')
-}
-
 export function setShowNewUserForm(search) {
   return {
     type: SET_SHOW_NEW_USER_FORM,
