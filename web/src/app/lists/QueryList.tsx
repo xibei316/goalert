@@ -5,10 +5,10 @@ import {
   QueryResult,
   DocumentNode,
 } from '@apollo/client'
-import { Grid } from '@material-ui/core'
 import { once } from 'lodash'
 import { PaginatedList, PaginatedListItemProps } from './PaginatedList'
 import { ITEMS_PER_PAGE, POLL_INTERVAL } from '../config'
+import { Grid } from '@mui/material'
 import { fieldAlias } from '../util/graphql'
 import { GraphQLClientWithErrors } from '../apollo'
 import ControlledPaginatedList, {

@@ -1,12 +1,6 @@
 import React, { ReactElement, useState } from 'react'
-import {
-  Checkbox,
-  Grid,
-  Icon,
-  IconButton,
-  makeStyles,
-  Tooltip,
-} from '@material-ui/core'
+import { Checkbox, Grid, Icon, IconButton, Tooltip } from '@mui/material'
+import makeStyles from '@mui/styles/makeStyles'
 import {
   PaginatedList,
   PaginatedListItemProps,
@@ -14,7 +8,7 @@ import {
 } from './PaginatedList'
 import classnames from 'classnames'
 import OtherActions from '../util/OtherActions'
-import { ArrowDropDown } from '@material-ui/icons'
+import { ArrowDropDown } from '@mui/icons-material'
 import Search from '../util/Search'
 import { useLocation } from 'react-router-dom'
 
@@ -206,6 +200,7 @@ export default function ControlledPaginatedList(
                     a.onClick(checkedItems)
                     setNone()
                   }}
+                  size='large'
                 >
                   {a.icon}
                 </IconButton>
