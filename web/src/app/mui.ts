@@ -23,6 +23,9 @@ export const theme = createTheme(
       },
       secondary: grey,
       error: red,
+      anchor: {
+        main: '#cd1831',
+      },
     },
 
     props: {
