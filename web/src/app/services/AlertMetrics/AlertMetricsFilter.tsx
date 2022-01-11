@@ -25,6 +25,7 @@ export default function AlertMetricsFilter(
 
   const setDateParam = (name: string, iso: string): void => {
     let value = DateTime.fromISO(iso)
+    if (!value.isValid) return
     value = DateTime.max(value, minDate)
     value = DateTime.min(value, maxDate)
 
