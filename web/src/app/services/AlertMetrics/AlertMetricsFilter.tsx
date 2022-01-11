@@ -5,6 +5,7 @@ import { useURLParams } from '../../actions/hooks'
 import { ISODatePicker } from '../../util/ISOPickers'
 
 interface AlertMetricsFilterProps {
+  // dateRange is an ordered array of length 2: [min, max]
   dateRange: DateTime[]
 }
 
@@ -16,8 +17,8 @@ export default function AlertMetricsFilter(
 ): JSX.Element {
   const [minDate, maxDate] = props.dateRange
   const [params, setParams] = useURLParams({
-    since: minDate.toISO(),
-    until: maxDate.toISO(),
+    since: minDate.toFormat(DATE_FORMAT),
+    until: maxDate.toFormat(DATE_FORMAT),
   })
   const since = DateTime.fromFormat(params.since, DATE_FORMAT)
   const until = DateTime.fromFormat(params.until, DATE_FORMAT)

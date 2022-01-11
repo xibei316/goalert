@@ -48,17 +48,21 @@ export default function AlertMetrics({
   serviceID,
 }: AlertMetricsProps): JSX.Element {
   const now = useMemo(() => DateTime.now(), [])
-  const minTime = now.minus({ days: MAX_DAY_COUNT - 1 }).startOf('day')
-  const maxTime = now.endOf('day')
+  const minDate = now.minus({ days: MAX_DAY_COUNT - 1 }).startOf('day')
+  const maxDate = now.endOf('day')
   const [params] = useURLParams({
-    since: minTime.toFormat(DATE_FORMAT),
-    until: maxTime.toFormat(DATE_FORMAT),
+    since: minDate.toFormat(DATE_FORMAT),
+    until: maxDate.toFormat(DATE_FORMAT),
   })
   const since = DateTime.fromFormat(params.since, DATE_FORMAT).startOf('day')
   const until = DateTime.fromFormat(params.until, DATE_FORMAT).endOf('day')
 
   const isValidRange =
-    since >= minTime && until >= minTime && since <= maxTime && until <= maxTime
+    since >= minDate &&
+    until >= minDate &&
+    since <= maxDate &&
+    until <= maxDate &&
+    since <= until
 
   const q = useQuery(query, {
     variables: {
@@ -97,7 +101,7 @@ export default function AlertMetrics({
     }),
   )
 
-  const data = Interval.fromDateTimes(since.startOf('day'), until.endOf('day'))
+  const data = Interval.fromDateTimes(since, until)
     .splitBy({ days: 1 })
     .map((day) => {
       let alertCount = 0
@@ -137,7 +141,7 @@ export default function AlertMetrics({
             title={`Daily alert counts over the past ${daycount} days`}
           />
           <CardContent>
-            <AlertMetricsFilter dateRange={[minTime, maxTime]} />
+            <AlertMetricsFilter dateRange={[minDate, maxDate]} />
             <AlertCountGraph data={data} />
             <AlertMetricsTable alerts={alerts} />
           </CardContent>
