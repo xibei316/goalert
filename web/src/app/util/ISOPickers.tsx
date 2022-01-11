@@ -44,8 +44,8 @@ function ISOPicker(props: ISOPickerProps): JSX.Element {
 
     value,
     onChange,
-    min,
-    max,
+    min: _min,
+    max: _max,
 
     ...textFieldProps
   } = props
@@ -54,6 +54,8 @@ function ISOPicker(props: ISOPickerProps): JSX.Element {
   const [_zone] = useURLParam('tz', 'local')
   const zone = timeZone || _zone
   const valueAsDT = props.value ? DateTime.fromISO(props.value, { zone }) : null
+  const min = _min ? DateTime.fromISO(_min, { zone }) : undefined
+  const max = _max ? DateTime.fromISO(_max, { zone }) : undefined
 
   // store input value as DT.format() string. pass to parent onChange as ISO string
   const [inputValue, setInputValue] = useState(
@@ -108,15 +110,21 @@ function ISOPicker(props: ISOPickerProps): JSX.Element {
     date: DateTime | null,
     keyboardInputValue = '',
   ): void {
+    const valid = (dt: DateTime): boolean => {
+      if (min && dt < min) return false
+      if (max && dt > max) return false
+      return dt.isValid
+    }
+
     // attempt to set value from DateTime object first
-    if (date?.isValid) {
+    if (date && valid(date)) {
       setInputValue(date.toFormat(format))
       onChange(dtToISO(date))
     } else {
       setInputValue(keyboardInputValue)
       // likely invalid, but validate keyboard input just to be sure
       const dt = DateTime.fromFormat(keyboardInputValue, format, { zone })
-      if (dt.isValid) onChange(dtToISO(dt))
+      if (valid(dt)) onChange(dtToISO(dt))
       else onChange(keyboardInputValue) // set invalid input for form validation
     }
   }
@@ -132,12 +140,8 @@ function ISOPicker(props: ISOPickerProps): JSX.Element {
         onChange={handleNativeChange}
         InputLabelProps={{ shrink: true, ...textFieldProps?.InputLabelProps }}
         inputProps={{
-          min: min
-            ? DateTime.fromISO(min, { zone }).toFormat(format)
-            : undefined,
-          max: max
-            ? DateTime.fromISO(max, { zone }).toFormat(format)
-            : undefined,
+          min: min ? min.toFormat(format) : undefined,
+          max: max ? max.toFormat(format) : undefined,
           ...textFieldProps?.inputProps,
         }}
       />
@@ -149,8 +153,8 @@ function ISOPicker(props: ISOPickerProps): JSX.Element {
       value={valueAsDT}
       onChange={handleFallbackChange}
       showTodayButton
-      minDate={min ? DateTime.fromISO(min, { zone }) : undefined}
-      maxDate={max ? DateTime.fromISO(max, { zone }) : undefined}
+      minDate={min}
+      maxDate={max}
       disabled={textFieldProps?.disabled}
       renderInput={(params) => (
         <TextField
