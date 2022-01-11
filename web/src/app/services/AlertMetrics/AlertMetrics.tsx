@@ -3,16 +3,15 @@ import { Box, Card, CardContent, CardHeader, Grid } from '@mui/material'
 import { useQuery, gql } from '@apollo/client'
 import { DateTime, Interval } from 'luxon'
 import _ from 'lodash'
-import { useURLParam } from '../../actions/hooks'
+import { useURLParams } from '../../actions/hooks'
 import AlertMetricsFilter, {
   DATE_FORMAT,
-  MAX_WEEKS_COUNT,
+  MAX_DAY_COUNT,
 } from './AlertMetricsFilter'
 import AlertCountGraph from './AlertCountGraph'
 import AlertMetricsTable from './AlertMetricsTable'
 import Notices from '../../details/Notices'
 import { GenericError, ObjectNotFound } from '../../error-pages'
-import Spinner from '../../loading/components/Spinner'
 
 const query = gql`
   query alertmetrics($serviceID: ID!, $input: AlertSearchOptions!) {
@@ -49,15 +48,17 @@ export default function AlertMetrics({
   serviceID,
 }: AlertMetricsProps): JSX.Element {
   const now = useMemo(() => DateTime.now(), [])
-  const [minTime, maxTime] = [
-    now.minus({ weeks: MAX_WEEKS_COUNT }).plus({ days: 1 }).startOf('day'),
-    now,
-  ]
+  const minTime = now.minus({ days: MAX_DAY_COUNT - 1 }).startOf('day')
+  const maxTime = now.endOf('day')
+  const [params] = useURLParams({
+    since: minTime.toFormat(DATE_FORMAT),
+    until: maxTime.toFormat(DATE_FORMAT),
+  })
+  const since = DateTime.fromFormat(params.since, DATE_FORMAT).startOf('day')
+  const until = DateTime.fromFormat(params.until, DATE_FORMAT).endOf('day')
 
-  const [_since] = useURLParam('since', minTime.toFormat(DATE_FORMAT))
-  const since = DateTime.fromFormat(_since, DATE_FORMAT)
-
-  const isValidRange = since >= minTime && since < maxTime
+  const isValidRange =
+    since >= minTime && until >= minTime && since <= maxTime && until <= maxTime
 
   const q = useQuery(query, {
     variables: {
@@ -66,7 +67,7 @@ export default function AlertMetrics({
         filterByServiceID: [serviceID],
         first: QUERY_LIMIT,
         notCreatedBefore: since.toISO(),
-        createdBefore: now.toISO(),
+        createdBefore: until.toISO(),
       },
     },
     skip: !isValidRange,
@@ -82,12 +83,12 @@ export default function AlertMetrics({
   if (!q.loading && !q.data?.service?.id) {
     return <ObjectNotFound type='service' />
   }
-  if (q.loading || !q?.data?.alerts) {
-    return <Spinner />
+  if (q.loading || !q.data?.alerts) {
+    // TODO loading state
   }
 
-  const hasNextPage = q?.data?.alerts?.pageInfo?.hasNextPage ?? false
-  const alerts = q?.data?.alerts?.nodes ?? []
+  const hasNextPage = q.data?.alerts?.pageInfo?.hasNextPage ?? false
+  const alerts = q.data?.alerts?.nodes ?? []
 
   const dateToAlerts = _.groupBy(alerts, (node) =>
     DateTime.fromISO(node.createdAt).toLocaleString({
@@ -96,7 +97,7 @@ export default function AlertMetrics({
     }),
   )
 
-  const data = Interval.fromDateTimes(since.startOf('day'), now.endOf('day'))
+  const data = Interval.fromDateTimes(since.startOf('day'), until.endOf('day'))
     .splitBy({ days: 1 })
     .map((day) => {
       let alertCount = 0
@@ -112,7 +113,7 @@ export default function AlertMetrics({
       }
     })
 
-  const daycount = Math.floor(now.diff(since, 'days').plus({ day: 1 }).days)
+  const daycount = Math.floor(until.diff(since, 'days').plus({ day: 1 }).days)
 
   return (
     <Grid container spacing={2}>
@@ -136,7 +137,7 @@ export default function AlertMetrics({
             title={`Daily alert counts over the past ${daycount} days`}
           />
           <CardContent>
-            <AlertMetricsFilter now={now} />
+            <AlertMetricsFilter dateRange={[minTime, maxTime]} />
             <AlertCountGraph data={data} />
             <AlertMetricsTable alerts={alerts} />
           </CardContent>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { DateTime, DateTimeUnit } from 'luxon'
-import { TextField, TextFieldProps } from '@mui/material'
+import { TextField, TextFieldProps, InputProps } from '@mui/material'
 import DatePicker from '@mui/lab/DatePicker'
 import DateTimePicker from '@mui/lab/DateTimePicker'
 import TimePicker from '@mui/lab/TimePicker'
@@ -20,10 +20,11 @@ interface ISOPickerProps extends ISOTextFieldProps {
 
 // Used for the native textfield component or the nested input component
 // that the Fallback renders.
-type ISOTextFieldProps = Partial<Omit<TextFieldProps, 'value'>> & {
-  value?: string
-  onChange: (value: string) => void
-}
+type ISOTextFieldProps = Partial<Omit<TextFieldProps, 'value'>> &
+  Partial<InputProps['inputProps']> & {
+    value?: string
+    onChange: (value: string) => void
+  }
 
 function hasInputSupport(name: string): boolean {
   if (new URLSearchParams(location.search).get('nativeInput') === '0') {
@@ -95,7 +96,10 @@ function ISOPicker(props: ISOPickerProps): JSX.Element {
 
     // only fire the parent's `onChange` handler when we have a new valid value,
     // taking care to ensure we ignore any zonal differences.
-    if (!valueAsDT || (newVal && newVal !== valueAsDT.toISO())) {
+    if (
+      e.target.validity.valid &&
+      (!valueAsDT || (newVal && newVal !== valueAsDT.toISO()))
+    ) {
       onChange(newVal)
     }
   }

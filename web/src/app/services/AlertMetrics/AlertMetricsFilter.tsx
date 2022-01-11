@@ -1,69 +1,63 @@
-import {
-  Grid,
-  Select,
-  InputLabel,
-  MenuItem,
-  FormControl,
-  SelectChangeEvent,
-} from '@mui/material'
-import { DateTime } from 'luxon'
 import React from 'react'
-import { useURLParam } from '../../actions/hooks'
+import { DateTime } from 'luxon'
+import { Grid } from '@mui/material'
+import { useURLParams } from '../../actions/hooks'
+import { ISODatePicker } from '../../util/ISOPickers'
 
 interface AlertMetricsFilterProps {
-  now: DateTime
+  dateRange: DateTime[]
 }
 
-export const MAX_WEEKS_COUNT = 4
+export const MAX_DAY_COUNT = 28
 export const DATE_FORMAT = 'y-MM-dd'
 
-export default function AlertMetricsFilter({
-  now,
-}: AlertMetricsFilterProps): JSX.Element {
-  const [since, setSince] = useURLParam<string>('since', '')
+export default function AlertMetricsFilter(
+  props: AlertMetricsFilterProps,
+): JSX.Element {
+  const [minDate, maxDate] = props.dateRange
+  const [params, setParams] = useURLParams({
+    since: minDate.toISO(),
+    until: maxDate.toISO(),
+  })
+  const since = DateTime.fromFormat(params.since, DATE_FORMAT)
+  const until = DateTime.fromFormat(params.until, DATE_FORMAT)
 
-  const dateRangeValue = since
-    ? Math.floor(
-        now.diff(
-          DateTime.fromFormat(since, DATE_FORMAT).minus({ day: 1 }),
-          'weeks',
-        ).weeks,
-      )
-    : MAX_WEEKS_COUNT // default
+  const setDateParam = (name: string, iso: string): void => {
+    let value = DateTime.fromISO(iso)
+    value = DateTime.max(value, minDate)
+    value = DateTime.min(value, maxDate)
 
-  const handleDateRangeChange = (e: SelectChangeEvent<number>): void => {
-    const weeks = e.target.value as number
-    setSince(
-      now
-        .minus({ weeks })
-        .plus({ days: 1 })
-        .startOf('day')
-        .toFormat(DATE_FORMAT),
-    )
+    if (name === 'since' && value <= until) {
+      setParams({ since: value.toFormat(DATE_FORMAT) })
+    }
+    if (name === 'until' && value >= since) {
+      setParams({ until: value.toFormat(DATE_FORMAT) })
+    }
   }
 
   return (
-    <Grid container sx={{ marginLeft: '3rem' }}>
+    <Grid container justifyContent='space-around'>
       <Grid item xs={5}>
-        <FormControl sx={{ width: '100%' }}>
-          <InputLabel id='demo-simple-select-helper-label'>
-            Date Range
-          </InputLabel>
-          <Select
-            fullWidth
-            labelId='demo-simple-select-helper-label'
-            id='demo-simple-select-helper'
-            value={dateRangeValue}
-            label='Date Range'
-            name='date-range'
-            onChange={handleDateRangeChange}
-          >
-            <MenuItem value={1}>Past week</MenuItem>
-            <MenuItem value={2}>Past 2 weeks</MenuItem>
-            <MenuItem value={3}>Past 3 weeks</MenuItem>
-            <MenuItem value={4}>Past 4 weeks</MenuItem>
-          </Select>
-        </FormControl>
+        <ISODatePicker
+          label='Since'
+          onChange={(v) => setDateParam('since', v as string)}
+          fullWidth
+          value={params.since}
+          min={minDate.toISO()}
+          max={until.toISO()}
+          required
+        />
+      </Grid>
+      <Grid item xs={5}>
+        <ISODatePicker
+          label='Until'
+          onChange={(v) => setDateParam('until', v as string)}
+          fullWidth
+          value={params.until}
+          min={since.toISO()}
+          max={maxDate.toISO()}
+          required
+        />
       </Grid>
     </Grid>
   )
