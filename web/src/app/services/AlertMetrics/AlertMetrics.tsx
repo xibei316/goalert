@@ -152,6 +152,11 @@ export default function AlertMetrics({
       return {
         date: date,
         count: alertCount,
+        label: day.start.toLocaleString({
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
       }
     })
 
