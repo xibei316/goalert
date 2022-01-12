@@ -12,7 +12,6 @@ import AlertCountGraph from './AlertCountGraph'
 import AlertMetricsTable from './AlertMetricsTable'
 import Notices from '../../details/Notices'
 import { GenericError, ObjectNotFound } from '../../error-pages'
-import { AlertSearchOptions } from '../../../schema'
 
 const query = gql`
   query alertmetrics($serviceID: ID!, $input: AlertSearchOptions!) {
@@ -29,11 +28,6 @@ const query = gql`
         service {
           name
           id
-        }
-        recentEvents {
-          nodes {
-            message
-          }
         }
         state {
           repeatCount
@@ -70,15 +64,14 @@ export default function AlertMetrics({
     (DateTime.fromFormat(_since, DATE_FORMAT) >= minTime &&
       DateTime.fromFormat(_since, DATE_FORMAT) < maxTime)
 
-  const queryInput: AlertSearchOptions = {
-    filterByServiceID: [serviceID],
-    first: QUERY_LIMIT,
-    createdBefore: now.toISO(),
-  }
   const q = useQuery(query, {
     variables: {
       serviceID,
-      input: queryInput,
+      input: {
+        filterByServiceID: [serviceID],
+        first: QUERY_LIMIT,
+        createdBefore: now.toISO(),
+      },
     },
     skip: !isValidRange,
   })
