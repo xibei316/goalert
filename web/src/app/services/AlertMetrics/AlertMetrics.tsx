@@ -12,6 +12,7 @@ import AlertCountGraph from './AlertCountGraph'
 import AlertMetricsTable from './AlertMetricsTable'
 import Notices from '../../details/Notices'
 import { GenericError, ObjectNotFound } from '../../error-pages'
+import { AlertSearchOptions } from '../../../schema'
 
 const query = gql`
   query alertmetrics($serviceID: ID!, $input: AlertSearchOptions!) {
@@ -61,21 +62,23 @@ export default function AlertMetrics({
     now,
   ]
 
-  const [_since] = useURLParam('since', minTime.toFormat(DATE_FORMAT))
+  const [_since] = useURLParam('since', '')
   const [showEscalatedAlerts] = useURLParam('showEscalatedAlerts', false)
-  const since = DateTime.fromFormat(_since, DATE_FORMAT)
 
-  const isValidRange = since >= minTime && since < maxTime
+  const isValidRange =
+    !_since ||
+    (DateTime.fromFormat(_since, DATE_FORMAT) >= minTime &&
+      DateTime.fromFormat(_since, DATE_FORMAT) < maxTime)
 
+  const queryInput: AlertSearchOptions = {
+    filterByServiceID: [serviceID],
+    first: QUERY_LIMIT,
+    createdBefore: now.toISO(),
+  }
   const q = useQuery(query, {
     variables: {
       serviceID,
-      input: {
-        filterByServiceID: [serviceID],
-        first: QUERY_LIMIT,
-        notCreatedBefore: since.toISO(),
-        createdBefore: now.toISO(),
-      },
+      input: queryInput,
     },
     skip: !isValidRange,
   })
@@ -94,6 +97,29 @@ export default function AlertMetrics({
   const hasNextPage = q?.data?.alerts?.pageInfo?.hasNextPage ?? false
   let alerts = q?.data?.alerts?.nodes ?? []
 
+  const getSince = (): DateTime => {
+    if (_since) {
+      // return date range set by user
+      return DateTime.fromFormat(_since, DATE_FORMAT)
+    }
+    if (!alerts.length) {
+      // return default minTime if no alerts
+      return minTime
+    }
+    // return date of earliest alert
+    return alerts.reduce(
+      (
+        prevAlert: { createdAt: string },
+        currentAlert: { createdAt: string },
+      ) => {
+        return DateTime.fromISO(prevAlert.createdAt) <
+          DateTime.fromISO(currentAlert.createdAt)
+          ? DateTime.fromISO(prevAlert.createdAt)
+          : DateTime.fromISO(currentAlert.createdAt)
+      },
+    )
+  }
+
   if (alerts.length && showEscalatedAlerts) {
     // currently only filters for open alerts
     // state is null for closed alerts
@@ -110,7 +136,10 @@ export default function AlertMetrics({
     }),
   )
 
-  const data = Interval.fromDateTimes(since.startOf('day'), now.endOf('day'))
+  const data = Interval.fromDateTimes(
+    getSince().startOf('day'),
+    now.endOf('day'),
+  )
     .splitBy({ days: 1 })
     .map((day) => {
       let alertCount = 0
@@ -126,7 +155,9 @@ export default function AlertMetrics({
       }
     })
 
-  const daycount = Math.floor(now.diff(since, 'days').plus({ day: 1 }).days)
+  const daycount = Math.floor(
+    now.diff(getSince(), 'days').plus({ day: 1 }).days,
+  )
 
   return (
     <Grid container spacing={2}>

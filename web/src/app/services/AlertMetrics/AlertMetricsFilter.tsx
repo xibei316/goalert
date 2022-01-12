@@ -35,7 +35,7 @@ export default function AlertMetricsFilter({
           'weeks',
         ).weeks,
       )
-    : MAX_WEEKS_COUNT // default
+    : '' // default
 
   const handleDateRangeChange = (e: SelectChangeEvent<number>): void => {
     const weeks = e.target.value as number
@@ -59,7 +59,7 @@ export default function AlertMetricsFilter({
             fullWidth
             labelId='demo-simple-select-helper-label'
             id='demo-simple-select-helper'
-            value={dateRangeValue}
+            value={dateRangeValue as number}
             label='Date Range'
             name='date-range'
             onChange={handleDateRangeChange}
