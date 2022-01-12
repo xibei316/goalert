@@ -29,6 +29,14 @@ const query = gql`
           name
           id
         }
+        recentEvents {
+          nodes {
+            message
+          }
+        }
+        state {
+          repeatCount
+        }
         createdAt
       }
       pageInfo {
@@ -54,6 +62,7 @@ export default function AlertMetrics({
   ]
 
   const [_since] = useURLParam('since', minTime.toFormat(DATE_FORMAT))
+  const [showEscalatedAlerts] = useURLParam('showEscalatedAlerts', false)
   const since = DateTime.fromFormat(_since, DATE_FORMAT)
 
   const isValidRange = since >= minTime && since < maxTime
@@ -83,7 +92,16 @@ export default function AlertMetrics({
   }
 
   const hasNextPage = q?.data?.alerts?.pageInfo?.hasNextPage ?? false
-  const alerts = q?.data?.alerts?.nodes ?? []
+  let alerts = q?.data?.alerts?.nodes ?? []
+
+  if (alerts.length && showEscalatedAlerts) {
+    // currently only filters for open alerts
+    // state is null for closed alerts
+    alerts = alerts.filter(
+      (alert: { state: { repeatCount: number } }) =>
+        alert?.state?.repeatCount > 0,
+    )
+  }
 
   const dateToAlerts = _.groupBy(alerts, (node) =>
     DateTime.fromISO(node.createdAt).toLocaleString({

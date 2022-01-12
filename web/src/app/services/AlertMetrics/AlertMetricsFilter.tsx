@@ -5,6 +5,8 @@ import {
   MenuItem,
   FormControl,
   SelectChangeEvent,
+  FormControlLabel,
+  Switch,
 } from '@mui/material'
 import { DateTime } from 'luxon'
 import React from 'react'
@@ -21,6 +23,10 @@ export default function AlertMetricsFilter({
   now,
 }: AlertMetricsFilterProps): JSX.Element {
   const [since, setSince] = useURLParam<string>('since', '')
+  const [showEscalatedAlerts, setShowEscalatedAlerts] = useURLParam<boolean>(
+    'showEscalatedAlerts',
+    false,
+  )
 
   const dateRangeValue = since
     ? Math.floor(
@@ -43,9 +49,9 @@ export default function AlertMetricsFilter({
   }
 
   return (
-    <Grid container sx={{ marginLeft: '3rem' }}>
-      <Grid item xs={5}>
-        <FormControl sx={{ width: '100%' }}>
+    <FormControl sx={{ width: '100%', marginLeft: '3rem' }}>
+      <Grid container>
+        <Grid item xs={4}>
           <InputLabel id='demo-simple-select-helper-label'>
             Date Range
           </InputLabel>
@@ -63,8 +69,20 @@ export default function AlertMetricsFilter({
             <MenuItem value={3}>Past 3 weeks</MenuItem>
             <MenuItem value={4}>Past 4 weeks</MenuItem>
           </Select>
-        </FormControl>
+        </Grid>
+        <Grid item xs={4} sx={{ marginLeft: '1rem', marginTop: '0.5rem' }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showEscalatedAlerts}
+                onChange={(e) => setShowEscalatedAlerts(e.target.checked)}
+                value='showEscalatedAlerts'
+              />
+            }
+            label='Show escalated alerts'
+          />
+        </Grid>
       </Grid>
-    </Grid>
+    </FormControl>
   )
 }
