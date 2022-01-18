@@ -295,4 +295,13 @@ ScheduleRuleForm.propTypes = {
       }),
     ).isRequired,
   }).isRequired,
+
+  // form props
+  disabled: p.bool,
+  errors: p.arrayOf(
+    p.shape({
+      message: p.string.isRequired,
+    }),
+  ),
+  onChange: p.func,
 }
