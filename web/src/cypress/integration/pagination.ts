@@ -69,7 +69,7 @@ function testPaginating(
         cy.get('body').should('contain', names[i])
     })
 
-    it(`should go to page 0 on search`, () => {
+    it(`should reset to page 0 on search change`, () => {
       cy.get('button[data-cy="back-button"]').should('be.disabled')
       for (let i = 0; i < itemsPerPage; i++)
         cy.get('body').should('contain', names[i])
@@ -79,11 +79,11 @@ function testPaginating(
       for (let i = 0; i < itemsPerPage; i++)
         cy.get('body').should('contain', names[itemsPerPage + i])
 
-      cy.pageSearch(nameSubstr.slice(0, -1))
+      cy.pageSearch('')
 
       cy.get('button[data-cy="back-button"]').should('be.disabled')
-      for (let i = 0; i < itemsPerPage; i++)
-        cy.get('body').should('contain', names[i])
+      // for (let i = 0; i < itemsPerPage; i++)
+      cy.get('body').should('contain', `Pagination Test ${nameSubstr} 0000`)
     })
 
     it(`should reset search on main nav click`, () => {
