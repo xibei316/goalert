@@ -31,8 +31,8 @@ func main() {
 	genData := flag.Bool("with-rand-data", false, "Repopulates the DB with random data.")
 	skipMigrate := flag.Bool("no-migrate", false, "Disables UP migration.")
 	skipDrop := flag.Bool("skip-drop", false, "Skip database drop/create step.")
-	adminURL := flag.String("admin-db-url", "postgres://goalert@localhost/postgres", "Admin DB URL to use (used to recreate DB).")
-	dbURL := flag.String("db-url", "postgres://goalert@localhost", "DB URL to use.")
+	adminURL := flag.String("admin-db-url", "postgres://goalert:goalert@localhost/goalert", "Admin DB URL to use (used to recreate DB).")
+	dbURL := flag.String("db-url", "host=localhost port=5432 user=goalert password=goalert dbname=goalert sslmode=disable", "DB URL to use.")
 	flag.Parse()
 
 	rand.Seed(*seedVal)

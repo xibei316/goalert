@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/target/goalert/engine/snoozemanager"
+
 	"github.com/pkg/errors"
 	"github.com/target/goalert/alert"
 	"github.com/target/goalert/app/lifecycle"
@@ -122,7 +124,10 @@ func NewEngine(ctx context.Context, db *sql.DB, c *Config) (*Engine, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "cleanup backend")
 	}
-
+	alertSnoozeMgr, err := snoozemanager.NewDB(ctx, db)
+	if err != nil {
+		return nil, errors.Wrap(err, "alert snooze backend")
+	}
 	p.modules = []updater{
 		rotMgr,
 		schedMgr,
@@ -132,6 +137,7 @@ func NewEngine(ctx context.Context, db *sql.DB, c *Config) (*Engine, error) {
 		verifyMgr,
 		hbMgr,
 		cleanMgr,
+		alertSnoozeMgr,
 	}
 
 	p.msg, err = message.NewDB(ctx, db, c.AlertLogStore, p.mgr)

@@ -54,6 +54,11 @@ type AlertSearchOptions struct {
 	NotCreatedBefore  *time.Time       `json:"notCreatedBefore"`
 }
 
+type AlertSnoozeInput struct {
+	AlertID      int `json:"alertID"`
+	DelayMinutes int `json:"delayMinutes"`
+}
+
 type AuthSubjectConnection struct {
 	Nodes    []user.AuthSubject `json:"nodes"`
 	PageInfo *PageInfo          `json:"pageInfo"`

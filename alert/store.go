@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"time"
 
+	alertsnooze "github.com/target/goalert/alert/snooze"
+
 	alertlog "github.com/target/goalert/alert/log"
 	"github.com/target/goalert/permission"
 	"github.com/target/goalert/util"
@@ -17,7 +19,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const maxBatch = 500
+const (
+	maxBatch          = 500
+	defaultSnoozeTime = 10 // 10 minutes
+)
 
 type Store interface {
 	Manager
@@ -58,8 +63,9 @@ type Manager interface {
 }
 
 type DB struct {
-	db    *sql.DB
-	logDB alertlog.Store
+	db       *sql.DB
+	logDB    alertlog.Store
+	snoozeDB alertsnooze.Store
 
 	insert          *sql.Stmt
 	update          *sql.Stmt
@@ -95,14 +101,15 @@ type Trigger interface {
 	TriggerAlert(int)
 }
 
-func NewDB(ctx context.Context, db *sql.DB, logDB alertlog.Store) (*DB, error) {
+func NewDB(ctx context.Context, db *sql.DB, logDB alertlog.Store, snooze alertsnooze.Store) (*DB, error) {
 	prep := &util.Prepare{DB: db, Ctx: ctx}
 
 	p := prep.P
 
 	return &DB{
-		db:    db,
-		logDB: logDB,
+		db:       db,
+		logDB:    logDB,
+		snoozeDB: snooze,
 
 		noStepsBySvc: p(`
 			SELECT coalesce(
@@ -421,8 +428,14 @@ func (db *DB) UpdateStatusByService(ctx context.Context, serviceID string, statu
 	if err != nil {
 		return err
 	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	nCtx := permission.CopyPermissionContextValue(ctx)
+	_ = db.snoozeDB.DeleteByServiceId(nCtx, serviceID)
 
-	return tx.Commit()
+	return nil
 }
 
 func (db *DB) UpdateManyAlertStatus(ctx context.Context, status Status, alertIDs []int) ([]int, error) {
@@ -483,10 +496,18 @@ func (db *DB) UpdateManyAlertStatus(ctx context.Context, status Status, alertIDs
 	if err != nil {
 		return nil, err
 	}
-
 	err = tx.Commit()
 	if err != nil {
 		return nil, err
+	}
+
+	nCtx := permission.CopyPermissionContextValue(ctx)
+	if t == alertlog.TypeAcknowledged {
+		for _, id := range ids {
+			go db.snooze(nCtx, id)
+		}
+	} else if t == alertlog.TypeClosed {
+		_ = db.snoozeDB.DeleteByAlertIds(nCtx, ids)
 	}
 	return updatedIDs, nil
 }
@@ -691,6 +712,7 @@ func (db *DB) UpdateStatusTx(ctx context.Context, tx *sql.Tx, id int, s Status) 
 		return err
 	}
 	if stat == StatusClosed {
+		_ = db.snoozeDB.DeleteByAlertIds(ctx, []int{id})
 		return logError{isAlreadyClosed: true, alertID: id, _type: alertlog.TypeClosed, logDB: db.logDB}
 	}
 	if stat == StatusActive && s == StatusActive {
@@ -862,4 +884,35 @@ func (db *DB) State(ctx context.Context, alertIDs []int) ([]State, error) {
 	}
 
 	return list, nil
+}
+
+func (db *DB) snooze(ctx context.Context, alertID int) {
+	var ack time.Time
+
+	alert, err := db.FindOne(ctx, alertID)
+	if err != nil {
+		log.Log(ctx, err)
+		return
+	}
+
+	alertLog, err := db.logDB.FindAll(ctx, alertID)
+	if err != nil {
+		log.Log(ctx, err)
+		return
+	}
+
+	for _, l := range alertLog {
+		if l.Type() == alertlog.TypeAcknowledged {
+			ack = l.Timestamp()
+		}
+	}
+	_, err = db.snoozeDB.Snooze(ctx, &alertsnooze.AlertSnooze{
+		AlertID:      alertID,
+		ServiceID:    alert.ServiceID,
+		LastAckTime:  &ack,
+		DelayMinutes: defaultSnoozeTime,
+	})
+	if err != nil {
+		log.Log(ctx, err)
+	}
 }

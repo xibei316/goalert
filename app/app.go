@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 
+	alertsnooze "github.com/target/goalert/alert/snooze"
+
 	"github.com/pkg/errors"
 	"github.com/target/goalert/alert"
 	alertlog "github.com/target/goalert/alert/log"
@@ -83,6 +85,7 @@ type App struct {
 	ConfigStore *config.Store
 
 	AlertStore    alert.Store
+	AlertSnooze   alertsnooze.Store
 	AlertLogStore alertlog.Store
 
 	AuthBasicStore        *basic.Store

@@ -25,6 +25,7 @@ func (app *App) initGraphQL(ctx context.Context) error {
 		NRStore:           app.NotificationRuleStore,
 		NCStore:           app.NCStore,
 		AlertStore:        app.AlertStore,
+		AlertSnoozeStore:  app.AlertSnooze,
 		AlertLogStore:     app.AlertLogStore,
 		ServiceStore:      app.ServiceStore,
 		FavoriteStore:     app.FavoriteStore,

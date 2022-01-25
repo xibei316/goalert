@@ -24,7 +24,10 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 		trace.StringAttribute("dest.type", msg.Dest.Type.String()),
 		trace.StringAttribute("dest.id", msg.Dest.ID),
 	)
+
 	ctx = log.WithField(ctx, "CallbackID", msg.ID)
+
+	//log.Logf(ctx, "userId : %s", msg.UserID)
 
 	if msg.Dest.Type.IsUserCM() {
 		ctx = permission.UserSourceContext(ctx, msg.UserID, permission.RoleUser, &permission.SourceInfo{
@@ -119,6 +122,8 @@ func (p *Engine) sendMessage(ctx context.Context, msg *message.Message) (*notifi
 			AlertID:        e.AlertID(),
 			CallbackID:     msg.ID,
 			LogEntry:       e.String(),
+			Event:          string(e.Type()),
+			Time:           e.Timestamp(),
 			Summary:        a.Summary,
 			Details:        a.Details,
 			NewAlertStatus: status,

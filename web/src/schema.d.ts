@@ -224,6 +224,7 @@ export interface Mutation {
   updateAlerts?: Alert[]
   updateRotation: boolean
   escalateAlerts?: Alert[]
+  snoozeAlerts: AlertSnooze
   setFavorite: boolean
   updateService: boolean
   updateEscalationPolicy: boolean
@@ -893,6 +894,19 @@ export interface UpdateUserContactMethodInput {
   id: string
   name?: string
   value?: string
+}
+
+export interface AlertSnooze {
+  id: number
+  alertID: number
+  serviceID: string
+  lastAckTime: ISOTimestamp
+  delayMinutes: number
+}
+
+export interface AlertSnoozeInput {
+  alertID: number
+  delayMinutes: number
 }
 
 export interface SendContactMethodVerificationInput {

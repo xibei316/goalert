@@ -15,6 +15,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/target/goalert/alert"
 	alertlog "github.com/target/goalert/alert/log"
+	alertsnooze "github.com/target/goalert/alert/snooze"
 	"github.com/target/goalert/assignment"
 	"github.com/target/goalert/auth"
 	"github.com/target/goalert/calendarsubscription"
@@ -114,6 +115,14 @@ type ComplexityRoot struct {
 	AlertLogEntryConnection struct {
 		Nodes    func(childComplexity int) int
 		PageInfo func(childComplexity int) int
+	}
+
+	AlertSnooze struct {
+		AlertID      func(childComplexity int) int
+		DelayMinutes func(childComplexity int) int
+		ID           func(childComplexity int) int
+		LastAckTime  func(childComplexity int) int
+		ServiceID    func(childComplexity int) int
 	}
 
 	AlertState struct {
@@ -240,6 +249,7 @@ type ComplexityRoot struct {
 		SetScheduleOnCallNotificationRules func(childComplexity int, input SetScheduleOnCallNotificationRulesInput) int
 		SetSystemLimits                    func(childComplexity int, input []SystemLimitInput) int
 		SetTemporarySchedule               func(childComplexity int, input SetTemporaryScheduleInput) int
+		SnoozeAlerts                       func(childComplexity int, input AlertSnoozeInput) int
 		TestContactMethod                  func(childComplexity int, id string) int
 		UpdateAlerts                       func(childComplexity int, input UpdateAlertsInput) int
 		UpdateAlertsByService              func(childComplexity int, input UpdateAlertsByServiceInput) int
@@ -574,6 +584,7 @@ type MutationResolver interface {
 	UpdateAlerts(ctx context.Context, input UpdateAlertsInput) ([]alert.Alert, error)
 	UpdateRotation(ctx context.Context, input UpdateRotationInput) (bool, error)
 	EscalateAlerts(ctx context.Context, input []int) ([]alert.Alert, error)
+	SnoozeAlerts(ctx context.Context, input AlertSnoozeInput) (*alertsnooze.AlertSnooze, error)
 	SetFavorite(ctx context.Context, input SetFavoriteInput) (bool, error)
 	UpdateService(ctx context.Context, input UpdateServiceInput) (bool, error)
 	UpdateEscalationPolicy(ctx context.Context, input UpdateEscalationPolicyInput) (bool, error)
@@ -863,6 +874,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AlertLogEntryConnection.PageInfo(childComplexity), true
+
+	case "AlertSnooze.alertID":
+		if e.complexity.AlertSnooze.AlertID == nil {
+			break
+		}
+
+		return e.complexity.AlertSnooze.AlertID(childComplexity), true
+
+	case "AlertSnooze.delayMinutes":
+		if e.complexity.AlertSnooze.DelayMinutes == nil {
+			break
+		}
+
+		return e.complexity.AlertSnooze.DelayMinutes(childComplexity), true
+
+	case "AlertSnooze.id":
+		if e.complexity.AlertSnooze.ID == nil {
+			break
+		}
+
+		return e.complexity.AlertSnooze.ID(childComplexity), true
+
+	case "AlertSnooze.lastAckTime":
+		if e.complexity.AlertSnooze.LastAckTime == nil {
+			break
+		}
+
+		return e.complexity.AlertSnooze.LastAckTime(childComplexity), true
+
+	case "AlertSnooze.serviceID":
+		if e.complexity.AlertSnooze.ServiceID == nil {
+			break
+		}
+
+		return e.complexity.AlertSnooze.ServiceID(childComplexity), true
 
 	case "AlertState.lastEscalation":
 		if e.complexity.AlertState.LastEscalation == nil {
@@ -1565,6 +1611,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SetTemporarySchedule(childComplexity, args["input"].(SetTemporaryScheduleInput)), true
+
+	case "Mutation.snoozeAlerts":
+		if e.complexity.Mutation.SnoozeAlerts == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_snoozeAlerts_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SnoozeAlerts(childComplexity, args["input"].(AlertSnoozeInput)), true
 
 	case "Mutation.testContactMethod":
 		if e.complexity.Mutation.TestContactMethod == nil {
@@ -3493,6 +3551,9 @@ type Mutation {
   # Escalates multiple alerts given the list of alertIDs.
   escalateAlerts(input: [Int!]): [Alert!]
 
+  #
+  snoozeAlerts(input: AlertSnoozeInput!): AlertSnooze!
+
   # Updates the favorite status of a target.
   setFavorite(input: SetFavoriteInput!): Boolean!
 
@@ -4039,6 +4100,7 @@ type AlertLogEntry {
   state: NotificationState
 }
 
+
 type NotificationState {
   details: String!
   status: NotificationStatus
@@ -4305,6 +4367,21 @@ input UpdateUserContactMethodInput {
 
   name: String
   value: String
+}
+
+# A method of contacting a user.
+type AlertSnooze {
+  id: Int!
+  alertID: Int!
+  serviceID: String!
+  lastAckTime: ISOTimestamp!
+  delayMinutes: Int!
+}
+
+input AlertSnoozeInput {
+  alertID: Int!
+
+  delayMinutes: Int!
 }
 
 input SendContactMethodVerificationInput {
@@ -4753,6 +4830,21 @@ func (ec *executionContext) field_Mutation_setTemporarySchedule_args(ctx context
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
 		arg0, err = ec.unmarshalNSetTemporaryScheduleInput2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐSetTemporaryScheduleInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_snoozeAlerts_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 AlertSnoozeInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNAlertSnoozeInput2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐAlertSnoozeInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -6184,6 +6276,181 @@ func (ec *executionContext) _AlertLogEntryConnection_pageInfo(ctx context.Contex
 	res := resTmp.(*PageInfo)
 	fc.Result = res
 	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AlertSnooze_id(ctx context.Context, field graphql.CollectedField, obj *alertsnooze.AlertSnooze) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AlertSnooze",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AlertSnooze_alertID(ctx context.Context, field graphql.CollectedField, obj *alertsnooze.AlertSnooze) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AlertSnooze",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AlertID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AlertSnooze_serviceID(ctx context.Context, field graphql.CollectedField, obj *alertsnooze.AlertSnooze) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AlertSnooze",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ServiceID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AlertSnooze_lastAckTime(ctx context.Context, field graphql.CollectedField, obj *alertsnooze.AlertSnooze) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AlertSnooze",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastAckTime, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalNISOTimestamp2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AlertSnooze_delayMinutes(ctx context.Context, field graphql.CollectedField, obj *alertsnooze.AlertSnooze) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AlertSnooze",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DelayMinutes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AlertState_lastEscalation(ctx context.Context, field graphql.CollectedField, obj *alert.State) (ret graphql.Marshaler) {
@@ -8563,6 +8830,48 @@ func (ec *executionContext) _Mutation_escalateAlerts(ctx context.Context, field 
 	res := resTmp.([]alert.Alert)
 	fc.Result = res
 	return ec.marshalOAlert2ᚕgithubᚗcomᚋtargetᚋgoalertᚋalertᚐAlertᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_snoozeAlerts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_snoozeAlerts_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SnoozeAlerts(rctx, args["input"].(AlertSnoozeInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*alertsnooze.AlertSnooze)
+	fc.Result = res
+	return ec.marshalNAlertSnooze2ᚖgithubᚗcomᚋtargetᚋgoalertᚋalertᚋsnoozeᚐAlertSnooze(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_setFavorite(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -17264,6 +17573,34 @@ func (ec *executionContext) unmarshalInputAlertSearchOptions(ctx context.Context
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputAlertSnoozeInput(ctx context.Context, obj interface{}) (AlertSnoozeInput, error) {
+	var it AlertSnoozeInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "alertID":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("alertID"))
+			it.AlertID, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "delayMinutes":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("delayMinutes"))
+			it.DelayMinutes, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputAuthSubjectInput(ctx context.Context, obj interface{}) (user.AuthSubject, error) {
 	var it user.AuthSubject
 	var asMap = obj.(map[string]interface{})
@@ -20005,6 +20342,53 @@ func (ec *executionContext) _AlertLogEntryConnection(ctx context.Context, sel as
 	return out
 }
 
+var alertSnoozeImplementors = []string{"AlertSnooze"}
+
+func (ec *executionContext) _AlertSnooze(ctx context.Context, sel ast.SelectionSet, obj *alertsnooze.AlertSnooze) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, alertSnoozeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AlertSnooze")
+		case "id":
+			out.Values[i] = ec._AlertSnooze_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "alertID":
+			out.Values[i] = ec._AlertSnooze_alertID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "serviceID":
+			out.Values[i] = ec._AlertSnooze_serviceID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "lastAckTime":
+			out.Values[i] = ec._AlertSnooze_lastAckTime(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "delayMinutes":
+			out.Values[i] = ec._AlertSnooze_delayMinutes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var alertStateImplementors = []string{"AlertState"}
 
 func (ec *executionContext) _AlertState(ctx context.Context, sel ast.SelectionSet, obj *alert.State) graphql.Marshaler {
@@ -20733,6 +21117,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "escalateAlerts":
 			out.Values[i] = ec._Mutation_escalateAlerts(ctx, field)
+		case "snoozeAlerts":
+			out.Values[i] = ec._Mutation_snoozeAlerts(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "setFavorite":
 			out.Values[i] = ec._Mutation_setFavorite(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -23375,6 +23764,25 @@ func (ec *executionContext) marshalNAlertLogEntryConnection2ᚖgithubᚗcomᚋta
 	return ec._AlertLogEntryConnection(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNAlertSnooze2githubᚗcomᚋtargetᚋgoalertᚋalertᚋsnoozeᚐAlertSnooze(ctx context.Context, sel ast.SelectionSet, v alertsnooze.AlertSnooze) graphql.Marshaler {
+	return ec._AlertSnooze(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAlertSnooze2ᚖgithubᚗcomᚋtargetᚋgoalertᚋalertᚋsnoozeᚐAlertSnooze(ctx context.Context, sel ast.SelectionSet, v *alertsnooze.AlertSnooze) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._AlertSnooze(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNAlertSnoozeInput2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐAlertSnoozeInput(ctx context.Context, v interface{}) (AlertSnoozeInput, error) {
+	res, err := ec.unmarshalInputAlertSnoozeInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNAlertStatus2githubᚗcomᚋtargetᚋgoalertᚋgraphql2ᚐAlertStatus(ctx context.Context, v interface{}) (AlertStatus, error) {
 	var res AlertStatus
 	err := res.UnmarshalGQL(v)
@@ -23927,6 +24335,27 @@ func (ec *executionContext) marshalNISOTimestamp2ᚕtimeᚐTimeᚄ(ctx context.C
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalNISOTimestamp2ᚖtimeᚐTime(ctx context.Context, v interface{}) (*time.Time, error) {
+	res, err := UnmarshalISOTimestamp(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNISOTimestamp2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := MarshalISOTimestamp(*v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {

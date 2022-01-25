@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/url"
 
+	alertsnooze "github.com/target/goalert/alert/snooze"
+
 	"github.com/target/goalert/alert"
 	alertlog "github.com/target/goalert/alert/log"
 	"github.com/target/goalert/auth/basic"
@@ -108,8 +110,15 @@ func (app *App) initStores(ctx context.Context) error {
 		return errors.Wrap(err, "init alertlog store")
 	}
 
+	if app.AlertSnooze == nil {
+		app.AlertSnooze, err = alertsnooze.NewDB(ctx, app.db)
+	}
+	if err != nil {
+		return errors.Wrap(err, "init alertsnooze store")
+	}
+
 	if app.AlertStore == nil {
-		app.AlertStore, err = alert.NewDB(ctx, app.db, app.AlertLogStore)
+		app.AlertStore, err = alert.NewDB(ctx, app.db, app.AlertLogStore, app.AlertSnooze)
 	}
 	if err != nil {
 		return errors.Wrap(err, "init alert store")

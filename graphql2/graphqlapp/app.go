@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	alertsnooze "github.com/target/goalert/alert/snooze"
+
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/errcode"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -50,30 +52,31 @@ import (
 )
 
 type App struct {
-	DB             *sql.DB
-	AuthBasicStore *basic.Store
-	UserStore      *user.Store
-	CMStore        contactmethod.Store
-	NRStore        notificationrule.Store
-	NCStore        notificationchannel.Store
-	AlertStore     alert.Store
-	AlertLogStore  alertlog.Store
-	ServiceStore   service.Store
-	FavoriteStore  favorite.Store
-	PolicyStore    escalation.Store
-	ScheduleStore  *schedule.Store
-	CalSubStore    *calendarsubscription.Store
-	RotationStore  rotation.Store
-	OnCallStore    oncall.Store
-	IntKeyStore    integrationkey.Store
-	LabelStore     label.Store
-	RuleStore      rule.Store
-	OverrideStore  override.Store
-	ConfigStore    *config.Store
-	LimitStore     *limit.Store
-	SlackStore     *slack.ChannelSender
-	HeartbeatStore *heartbeat.Store
-	NoticeStore    notice.Store
+	DB               *sql.DB
+	AuthBasicStore   *basic.Store
+	UserStore        *user.Store
+	CMStore          contactmethod.Store
+	NRStore          notificationrule.Store
+	NCStore          notificationchannel.Store
+	AlertStore       alert.Store
+	AlertSnoozeStore alertsnooze.Store
+	AlertLogStore    alertlog.Store
+	ServiceStore     service.Store
+	FavoriteStore    favorite.Store
+	PolicyStore      escalation.Store
+	ScheduleStore    *schedule.Store
+	CalSubStore      *calendarsubscription.Store
+	RotationStore    rotation.Store
+	OnCallStore      oncall.Store
+	IntKeyStore      integrationkey.Store
+	LabelStore       label.Store
+	RuleStore        rule.Store
+	OverrideStore    override.Store
+	ConfigStore      *config.Store
+	LimitStore       *limit.Store
+	SlackStore       *slack.ChannelSender
+	HeartbeatStore   *heartbeat.Store
+	NoticeStore      notice.Store
 
 	AuthHandler *auth.Handler
 

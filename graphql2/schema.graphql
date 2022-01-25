@@ -315,6 +315,9 @@ type Mutation {
   # Escalates multiple alerts given the list of alertIDs.
   escalateAlerts(input: [Int!]): [Alert!]
 
+  #
+  snoozeAlerts(input: AlertSnoozeInput!): AlertSnooze!
+
   # Updates the favorite status of a target.
   setFavorite(input: SetFavoriteInput!): Boolean!
 
@@ -861,6 +864,7 @@ type AlertLogEntry {
   state: NotificationState
 }
 
+
 type NotificationState {
   details: String!
   status: NotificationStatus
@@ -1127,6 +1131,20 @@ input UpdateUserContactMethodInput {
 
   name: String
   value: String
+}
+
+type AlertSnooze {
+  id: Int!
+  alertID: Int!
+  serviceID: String!
+  lastAckTime: ISOTimestamp!
+  delayMinutes: Int!
+}
+
+input AlertSnoozeInput {
+  alertID: Int!
+
+  delayMinutes: Int!
 }
 
 input SendContactMethodVerificationInput {

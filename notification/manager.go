@@ -138,9 +138,6 @@ func (mgr *Manager) SendMessage(ctx context.Context, msg Message) (*SendResult, 
 		"ProviderType": destType,
 		"CallbackID":   msg.ID(),
 	})
-	if a, ok := msg.(Alert); ok {
-		ctx = log.WithField(ctx, "AlertID", a.AlertID)
-	}
 
 	var tried bool
 	for _, s := range mgr.searchOrder {

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	alertsnooze "github.com/target/goalert/alert/snooze"
+
 	"github.com/pkg/errors"
 	"github.com/target/goalert/alert"
 	alertlog "github.com/target/goalert/alert/log"
@@ -384,6 +386,37 @@ func (m *Mutation) EscalateAlerts(ctx context.Context, ids []int) ([]alert.Alert
 	}
 
 	return m.AlertStore.FindMany(ctx, ids)
+}
+
+func (m *Mutation) SnoozeAlerts(ctx context.Context, input graphql2.AlertSnoozeInput) (*alertsnooze.AlertSnooze, error) {
+	var ack time.Time
+	a, err := m.AlertStore.FindOne(ctx, input.AlertID)
+	if err != nil {
+		return nil, err
+	}
+
+	alertLog, err := m.AlertLogStore.FindAll(ctx, input.AlertID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, l := range alertLog {
+		if l.Type() == alertlog.TypeAcknowledged {
+			ack = l.Timestamp()
+		}
+	}
+
+	out, err := m.AlertSnoozeStore.Snooze(ctx, &alertsnooze.AlertSnooze{
+		AlertID:      input.AlertID,
+		ServiceID:    a.ServiceID,
+		LastAckTime:  &ack,
+		DelayMinutes: input.DelayMinutes,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }
 
 func (m *Mutation) UpdateAlerts(ctx context.Context, args graphql2.UpdateAlertsInput) ([]alert.Alert, error) {

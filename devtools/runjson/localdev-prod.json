@@ -30,7 +30,7 @@
     "Command": [
       "bin/goalert",
       "-l=localhost:3030",
-      "--db-url=postgres://goalert@localhost:5432/goalert?sslmode=disable",
+      "--db-url=postgres://goalert:goalert@localhost:5432/goalert?sslmode=disable",
       "--listen-sysapi=localhost:1234",
       "--listen-prometheus=localhost:2112"
     ],

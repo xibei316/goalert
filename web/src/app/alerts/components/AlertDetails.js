@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import p from 'prop-types'
 import Card from '@material-ui/core/Card'
 import CardContent from '@material-ui/core/CardContent'
@@ -12,11 +12,14 @@ import TableCell from '@material-ui/core/TableCell'
 import TableHead from '@material-ui/core/TableHead'
 import TableRow from '@material-ui/core/TableRow'
 import Typography from '@material-ui/core/Typography'
+import Menu from '@material-ui/core/Menu'
+import MenuItem from '@material-ui/core/MenuItem'
 import Countdown from 'react-countdown-now'
 import {
   ArrowUpward as EscalateIcon,
   Check as AcknowledgeIcon,
   Close as CloseIcon,
+  Snooze as SnoozeIcon,
 } from '@material-ui/icons'
 import { gql, useMutation } from '@apollo/client'
 import { RotationLink, ScheduleLink, ServiceLink, UserLink } from '../../links'
@@ -78,6 +81,42 @@ function AlertDetails(props) {
         input: [props.data.id],
       },
     },
+  )
+  const [mutationSnooze] = useMutation(
+    gql`
+      mutation SnoozeAlertMutation($input: AlertSnoozeInput!) {
+        snoozeAlerts(input: $input) {
+          alertID
+        }
+      }
+    `,
+  )
+
+  const [anchorEl, setAnchorEl] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const openmenu = useCallback((e) => {
+    setAnchorEl(e.currentTarget)
+    setMenuOpen(true)
+  }, [])
+
+  const handleClose = useCallback(() => {
+    setMenuOpen(false)
+  }, [])
+
+  const snooze = useCallback(
+    (min) => {
+      handleClose()
+      mutationSnooze({
+        variables: {
+          input: {
+            alertID: parseInt(props.data.id, 10),
+            delayMinutes: min,
+          },
+        },
+      })
+    },
+    [handleClose, mutationSnooze],
   )
 
   // localstorage stores true/false as a string; convert to a bool
@@ -403,6 +442,14 @@ function AlertDetails(props) {
           handleOnClick: () => ack(),
         },
       ]
+    } else {
+      options = [
+        {
+          icon: <SnoozeIcon />,
+          label: 'Snooze',
+          handleOnClick: openmenu,
+        },
+      ]
     }
 
     // only remaining status is acknowledged, show remaining buttons
@@ -447,6 +494,12 @@ function AlertDetails(props) {
             </Grid>
           </CardContent>
           <CardActions secondaryActions={getMenuOptions()} />
+          <Menu anchorEl={anchorEl} open={menuOpen} onClose={handleClose}>
+            <MenuItem onClick={() => snooze(60)}>1 hour</MenuItem>
+            <MenuItem onClick={() => snooze(360)}>6 hour</MenuItem>
+            <MenuItem onClick={() => snooze(720)}>12 hour</MenuItem>
+            <MenuItem onClick={() => snooze(1440)}>24 hour</MenuItem>
+          </Menu>
         </Card>
       </Grid>
       {renderAlertDetails()}

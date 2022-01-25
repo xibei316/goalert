@@ -3,10 +3,11 @@ package permission
 import (
 	"context"
 	"errors"
-	"github.com/target/goalert/util/log"
 	"regexp"
 	"strings"
 	"sync/atomic"
+
+	"github.com/target/goalert/util/log"
 
 	"go.opencensus.io/trace"
 )
@@ -212,4 +213,13 @@ func ServiceID(ctx context.Context) string {
 func TeamID(ctx context.Context) string {
 	sid, _ := ctx.Value(contextKeyTeamID).(string)
 	return sid
+}
+
+func CopyPermissionContextValue(ctx context.Context) context.Context {
+	nCtx := context.Background()
+	nCtx = context.WithValue(nCtx, contextKeyUserRole, ctx.Value(contextKeyUserRole))
+	nCtx = context.WithValue(nCtx, contextKeyCheckCount, ctx.Value(contextKeyCheckCount))
+	nCtx = context.WithValue(nCtx, contextHasAuth, ctx.Value(contextHasAuth))
+	nCtx = context.WithValue(nCtx, contextKeyCheckCountMax, ctx.Value(contextKeyCheckCountMax))
+	return nCtx
 }

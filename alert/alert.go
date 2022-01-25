@@ -12,7 +12,7 @@ import (
 // maximum lengths
 const (
 	MaxSummaryLength = 118
-	MaxDetailsLength = 6 * 1024 // 6KiB
+	MaxDetailsLength = 20 * 1024 // 6KiB
 )
 
 // An Alert represents an ongoing situation.

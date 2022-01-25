@@ -1,12 +1,18 @@
 package notification
 
-import "github.com/target/goalert/alert"
+import (
+	"time"
+
+	"github.com/target/goalert/alert"
+)
 
 type AlertStatus struct {
 	Dest       Dest
 	CallbackID string
 	AlertID    int
 	LogEntry   string
+	Event      string
+	Time       time.Time
 
 	// Summary of the alert that this status is in regards to.
 	Summary string

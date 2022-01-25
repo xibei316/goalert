@@ -32,6 +32,8 @@ models:
     model: github.com/target/goalert/assignment.TargetType
   Alert:
     model: github.com/target/goalert/alert.Alert
+  AlertSnooze:
+    model: github.com/target/goalert/alert/snooze.AlertSnooze
   AlertLogEntry:
     model: github.com/target/goalert/alert/log.Entry
   AlertState:

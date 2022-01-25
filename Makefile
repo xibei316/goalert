@@ -7,7 +7,7 @@
 
 GOALERT_DEPS := $(shell find . -path ./web/src -prune -o -path ./vendor -prune -o -path ./.git -prune -o -type f -name "*.go" -print) go.sum
 CFGPARAMS = devtools/configparams/*.go
-DB_URL = postgres://goalert@localhost:5432/goalert?sslmode=disable
+DB_URL = postgres://goalert:goalert@localhost:5432/goalert?sslmode=disable
 
 LOG_DIR=
 GOPATH:=$(shell go env GOPATH)

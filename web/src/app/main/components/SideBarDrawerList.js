@@ -27,7 +27,7 @@ import ListItemIcon from '@material-ui/core/ListItemIcon'
 import { CurrentUserAvatar } from '../../util/avatars'
 import { authLogout } from '../../actions'
 import { useDispatch } from 'react-redux'
-import RequireConfig, { Config } from '../../util/RequireConfig'
+import RequireConfig, {Config, useSessionInfo} from '../../util/RequireConfig'
 import NavSubMenu from './NavSubMenu'
 import logo from '../../public/goalert-alt-logo.png'
 import AppLink from '../../util/AppLink'
@@ -65,6 +65,7 @@ export default function SideBarDrawerList(props) {
   const classes = useStyles()
   const dispatch = useDispatch()
   const logout = () => dispatch(authLogout(true))
+  const { isAdmin } = useSessionInfo()
 
   function renderSidebarItem(IconComponent, label) {
     return (
@@ -93,17 +94,33 @@ export default function SideBarDrawerList(props) {
   }
 
   function renderSidebarNavLink(icon, path, label, key) {
-    return (
-      <NavLink
-        key={key}
-        to={path}
-        className={classes.nav}
-        activeClassName={classes.navSelected}
-        onClick={closeMobileSidebar}
-      >
-        {renderSidebarItem(icon, label)}
-      </NavLink>
-    )
+    if (!isAdmin){
+      if (label === 'Alerts' || label === 'Profile' || label === 'Wizard') {
+        return (
+          <NavLink
+            key={key}
+            to={path}
+            className={classes.nav}
+            activeClassName={classes.navSelected}
+            onClick={closeMobileSidebar}
+          >
+            {renderSidebarItem(icon, label)}
+          </NavLink>
+        )
+      }
+    }else{
+      return (
+        <NavLink
+          key={key}
+          to={path}
+          className={classes.nav}
+          activeClassName={classes.navSelected}
+          onClick={closeMobileSidebar}
+        >
+          {renderSidebarItem(icon, label)}
+        </NavLink>
+      )
+    }
   }
 
   function renderAdmin() {
@@ -136,7 +153,7 @@ export default function SideBarDrawerList(props) {
         <img height={38} src={logo} alt='GoAlert Logo' />
       </div>
       <Divider />
-      <nav>
+      <nav id='hh'>
         <List role='navigation' className={classes.list} data-cy='nav-list'>
           {routeConfig
             .filter((cfg) => cfg.nav !== false)

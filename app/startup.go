@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/target/goalert/notification/webhook"
+
 	"github.com/target/goalert/app/lifecycle"
 	"github.com/target/goalert/notification"
 	"github.com/target/goalert/notification/email"
-	"github.com/target/goalert/notification/webhook"
 	"github.com/target/goalert/retry"
 	"github.com/target/goalert/util/log"
 
